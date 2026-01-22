@@ -8,12 +8,12 @@ import threading
 import time
 
 # ==========================================
-# ⚙️ ตั้งค่า (Configuration) - Real-time Maker Version
+# Configuration - Real-time Maker Version
 # ==========================================
 MODEL_FILE = 'BTC_USDT/btc_scalping_model_lgbm.txt'
 CONFIDENCE_THRESHOLD = 0.65
-HOLDING_TIME = 10  # เพิ่มจาก 5 → 10 วินาทีสำหรับ maker orders
-MIN_PROFIT = 0.008  # เพิ่มจาก 0.01 → 0.008 คำนึงค่าธรรมเนียม 0.1%
+HOLDING_TIME = 10  # Increased from 5 → 10 seconds for maker orders
+MIN_PROFIT = 0.008  # Increased from 0.01 → 0.008 considering 0.1% fee
 MIN_FLOW = 0.01
 SYMBOL = "btcusdt"
 
@@ -22,21 +22,21 @@ TRADE_SOCKET = f"wss://stream.binance.com:9443/ws/{SYMBOL}@aggTrade"
 DEPTH_SOCKET = f"wss://stream.binance.com:9443/ws/{SYMBOL}@depth5@100ms"
 
 # Maker order settings
-ORDER_TIMEOUT = 30  # วินาทีที่รอให้ order ถูก match
-SPREAD_BUFFER = 0.00005  # 0.005% ห่างจาก bid/ask
-MAX_ORDER_AGE = 3  # วินาทีที่สามารถแก้ไขราคา order
+ORDER_TIMEOUT = 30  # Seconds to wait for order match
+SPREAD_BUFFER = 0.00005  # 0.005% distance from bid/ask
+MAX_ORDER_AGE = 3  # Seconds that can modify order price
 
-# โหลดโมเดล LightGBM
-print(f"🧠 กำลังโหลดสมอง AI จาก {MODEL_FILE}...")
+# Load LightGBM model
+print(f"Loading AI model from {MODEL_FILE}...")
 model = lgb.Booster(model_file=MODEL_FILE)
-print("✅ พร้อมทำงาน!")
-print(f"⚙️ Threshold: {CONFIDENCE_THRESHOLD*100}% | Min Profit: {MIN_PROFIT*100}% | Min Flow: {MIN_FLOW}")
-print(f"📋 Real-time Maker Mode: Holding {HOLDING_TIME}s | Timeout {ORDER_TIMEOUT}s | Buffer {SPREAD_BUFFER*100}%")
+print("Ready to work!")
+print(f"Threshold: {CONFIDENCE_THRESHOLD*100}% | Min Profit: {MIN_PROFIT*100}% | Min Flow: {MIN_FLOW}")
+print(f"Real-time Maker Mode: Holding {HOLDING_TIME}s | Timeout {ORDER_TIMEOUT}s | Buffer {SPREAD_BUFFER*100}%")
 
 # ==========================================
-# 📊 ตัวแปรเก็บข้อมูล (Data Storage)
+# Data Storage
 # ==========================================
-# เก็บข้อมูลย้อนหลัง 30 วินาที สำหรับคำนวณ Moving Averages
+# Store last 30 seconds data for Moving Average calculations
 history_buffer = deque(maxlen=30)
 
 current_second_data = {

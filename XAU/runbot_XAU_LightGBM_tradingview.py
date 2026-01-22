@@ -23,17 +23,17 @@ TRADINGVIEW_SESSION_ID = "3gz2chewk5w7tp9cuq6f3c7bwvxeu1yd"
 TRADINGVIEW_SESSION_SIGN = "v3:NqI0XEOsTQzh0dflQV9cXtwbBa+cW4NVNCGoFNq03vg="
 DEVICE_TOKEN = "cU1EcEFROjA.VNGLVg1eShYJogpQ_dyv8jsafgC1UzNvT212Kpi2jVw"
 
-# Updated cookies from browser (ล่าสุด)
+# Updated cookies from browser (latest)
 COOKIE_STRING = "cookiePrivacyPreferenceBannerProduction=notApplicable; _ga=GA1.1.1729562086.1767587987; cookiesSettings={\"analytics\":true,\"advertising\":true}; device_t=cU1EcEFROjA.VNGLVg1eShYJogpQ_dyv8jsafgC1UzNvT212Kpi2jVw; sessionid=3gz2chewk5w7tp9cuq6f3c7bwvxeu1yd; sessionid_sign=v3:NqI0XEOsTQzh0dflQV9cXtwbBa+cW4NVNCGoFNq03vg=; etg=undefined; cachec=undefined; _sp_ses.cf1a=*; _sp_id.cf1a=59fe9406-0d6a-47df-998d-ba97f2735c2d.1767587987.17.1768994993.1768979119.20ccd534-80a0-4eda-a3dd-bb962285af57.bb689f90-3a6f-4b7b-a809-b271cbb1c524.f0aa93a7-c4d1-4b29-87b7-f6085dcf6574.1768994984747.2; _ga_YVVRYGL0E0=GS2.1.s1768991547$o39$g1$t1768994993$j43$l0$h0"
 
-TRADE_QTY = 1  # 0.01 XAUUSD (ประมาณ $20-30 ต่อ trade)
+TRADE_QTY = 1  # 0.01 XAUUSD (approximately $20-30 per trade)
 TV_BASE_URL = "https://papertrading.tradingview.com"
 
-# โหลดโมเดล LightGBM
-print(f"🧠 กำลังโหลดสมอง AI จาก {MODEL_FILE}...")
+# Load LightGBM model
+print(f"Loading AI model from {MODEL_FILE}...")
 model = lgb.Booster(model_file=MODEL_FILE)
-print("✅ พร้อมทำงาน!")
-print(f"⚙️ Threshold: {CONFIDENCE_THRESHOLD*100}% | Holding Time: {HOLDING_TIME}s | Min Flow: {MIN_FLOW}")
+print("Ready to work!")
+print(f"Threshold: {CONFIDENCE_THRESHOLD*100}% | Holding Time: {HOLDING_TIME}s | Min Flow: {MIN_FLOW}")
 
 # State variables
 history_buffer = deque(maxlen=30)
@@ -81,7 +81,7 @@ def place_order(side, qty=TRADE_QTY):
     url = f"{TV_BASE_URL}/trading/place/{TRADINGVIEW_ACCOUNT_ID}"
 
     payload = {
-        "symbol": "OANDA:XAUUSD",  # XAU/USD บน TradingView
+        "symbol": "OANDA:XAUUSD",  # XAU/USD on TradingView
         "type": "market",
         "qty": qty,
         "side": side,
@@ -103,18 +103,18 @@ def place_order(side, qty=TRADE_QTY):
             result = response.json()
             order_id = result.get('id', 'N/A')
             status = result.get('status', 'N/A')
-            print(f"📋 TradingView {side.upper()} {qty} XAU | Order {order_id} | Status {status}")
+            print(f"TradingView {side.upper()} {qty} XAU | Order {order_id} | Status {status}")
             return result
         else:
-            print(f"❌ TradingView Error: {response.status_code}")
+            print(f"TradingView Error: {response.status_code}")
             print(f"Response: {response.text[:300]}")
             return None
 
     except requests.exceptions.Timeout:
-        print("⏰ Request timeout")
+        print("Request timeout")
         return None
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         return None
 
 def open_long():
@@ -126,26 +126,26 @@ def close_long():
     return place_order("sell", TRADE_QTY)
 
 # ==========================================
-# Feature Calculation (จากโค้ดเดิม)
+# Feature Calculation (from original code)
 # ==========================================
 def calculate_features(current_data, history):
-    """คำนวณ features ทั้ง 14 ตัวจากข้อมูล real-time"""
+    """Calculate all 14 features from real-time data"""
     
-    # สร้าง DataFrame จาก history + current
+    # Create DataFrame from history + current
     all_data = list(history) + [current_data]
     df = pd.DataFrame(all_data)
     
     if len(df) < 2:
-        return None  # ยังไม่มีข้อมูลพอ
+        return None  # Not enough data yet
     
-    # Features พื้นฐาน
+    # Basic features
     features = {
         'total_volume': current_data['total_volume'],
         'net_flow': current_data['net_flow'],
         'trade_count': current_data['trade_count'],
     }
     
-    # Moving Averages ของ Net Flow
+    # Moving Averages of Net Flow
     features['net_flow_ma5'] = df['net_flow'].tail(5).mean() if len(df) >= 5 else df['net_flow'].mean()
     features['net_flow_ma15'] = df['net_flow'].tail(15).mean() if len(df) >= 15 else df['net_flow'].mean()
     features['net_flow_ma30'] = df['net_flow'].tail(30).mean() if len(df) >= 30 else df['net_flow'].mean()
@@ -181,7 +181,7 @@ def calculate_features(current_data, history):
     # Net Flow Ratio
     features['net_flow_ratio'] = current_data['net_flow'] / (current_data['total_volume'] + 1e-10)
     
-    # Cumulative Net Flow 30 วินาที
+    # Cumulative Net Flow 30 seconds
     features['cumulative_net_flow_30'] = df['net_flow'].tail(30).sum()
     
     return features
@@ -199,30 +199,30 @@ def check_active_position(current_price, current_ts):
         diff = current_price - entry_price
         pnl = diff * TRADE_QTY
 
-        print("🔄 Closing position...")
+        print("Closing position...")
         close_long()
 
         stats['total_pnl'] += pnl
 
-        if diff > 0.01:  # ใช้ MIN_PROFIT = 0.01
+        if diff > 0.01:  # Use MIN_PROFIT = 0.01
             stats['win'] += 1
-            result_text = "✅ WIN"
+            result_text = "WIN"
         elif diff > -0.01:
             stats['breakeven'] += 1
-            result_text = "➖ BREAKEVEN"
+            result_text = "BREAKEVEN"
         else:
             stats['loss'] += 1
-            result_text = "❌ LOSS"
+            result_text = "LOSS"
 
         total = stats['win'] + stats['loss'] + stats['breakeven']
         real_trades = stats['win'] + stats['loss']
         win_rate = (stats['win'] / real_trades * 100) if real_trades > 0 else 0
 
         print("-" * 50)
-        print(f"🏁 ปิดออเดอร์: {entry_price:.2f} -> {current_price:.2f} ({diff:+.2f}) | {result_text}")
-        print(f"📊 Score: {stats['win']}W - {stats['loss']}L - {stats['breakeven']}BE")
-        print(f"💰 Total PnL: {stats['total_pnl']:+.2f} USD")
-        print(f"📈 Win Rate: {win_rate:.1f}%")
+        print(f"Closing order: {entry_price:.2f} -> {current_price:.2f} ({diff:+.2f}) | {result_text}")
+        print(f"Score: {stats['win']}W - {stats['loss']}L - {stats['breakeven']}BE")
+        print(f"Total PnL: {stats['total_pnl']:+.2f} USD")
+        print(f"Win Rate: {win_rate:.1f}%")
         print("-" * 50)
 
         active_position = None
@@ -234,13 +234,13 @@ def predict_and_trade(data_row, current_price, current_ts):
     if active_position:
         return
 
-    # คำนวณ features
+    # Calculate features
     features = calculate_features(data_row, history_buffer)
     
     if features is None:
         return
 
-    # เรียงลำดับ features ให้ตรงกับตอน train
+    # Arrange features to match training order
     feature_cols = [
         'total_volume', 'net_flow', 'trade_count',
         'net_flow_ma5', 'net_flow_ma15', 'net_flow_ma30',
@@ -252,13 +252,13 @@ def predict_and_trade(data_row, current_price, current_ts):
     
     X = pd.DataFrame([features])[feature_cols]
     
-    # LightGBM Booster predict() คืนค่า probability โดยตรง
+    # LightGBM Booster predict() returns probability directly
     prob_buy = model.predict(X)[0]
 
     timestamp = datetime.datetime.now().strftime('%H:%M:%S')
 
     if prob_buy >= CONFIDENCE_THRESHOLD :
-        print(f"🚀 {timestamp} | XAU BUY signal! | Confidence {prob_buy*100:.1f}% | Flow {data_row['net_flow']:.2f} | Price {current_price:.2f}")
+        print(f"{timestamp} | XAU BUY signal! | Confidence {prob_buy*100:.1f}% | Flow {data_row['net_flow']:.2f} | Price {current_price:.2f}")
 
         result = open_long()
 
@@ -287,14 +287,14 @@ def on_message(ws, message):
         if ts > current_second_data['timestamp_sec']:
             current_second_data['close_price'] = price
             
-            # เก็บเข้า history buffer
+            # Add to history buffer
             history_buffer.append(current_second_data.copy())
             
-            # ทำนาย (ต้องมีอย่างน้อย 5 วินาที)
+            # Predict (need at least 5 seconds)
             if len(history_buffer) >= 5:
                 predict_and_trade(current_second_data, price, ts)
 
-            # รีเซ็ตข้อมูลวินาทีใหม่
+            # Reset new second data
             current_second_data = {
                 'net_flow': 0.0,
                 'total_volume': 0.0,
@@ -310,10 +310,10 @@ def on_message(ws, message):
         current_second_data['close_price'] = price
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
 
 def on_error(ws, error):
-    print(f"❌ WebSocket Error: {error}")
+    print(f"WebSocket Error: {error}")
 
 def on_close(ws, close_status_code, close_msg):
     print("### TradingView Paper Trade Summary ###")
@@ -322,52 +322,47 @@ def on_close(ws, close_status_code, close_msg):
     win_rate = (stats['win'] / real_trades * 100) if real_trades > 0 else 0
     
     print("="*50)
-    print("📊 สรุปผลการเทรด XAU")
+    print("XAU Trading Summary")
     print("="*50)
-    print(f"📈 จำนวน trades: {stats['win']}W / {stats['loss']}L / {stats['breakeven']}BE")
-    print(f"🎯 Win Rate: {win_rate:.1f}%")
-    print(f"💰 กำไร/ขาดทุนรวม: {stats['total_pnl']:+.2f} USD")
+    print(f"Number of trades: {stats['win']}W / {stats['loss']}L / {stats['breakeven']}BE")
+    print(f"Win Rate: {win_rate:.1f}%")
+    print(f"Total Profit/Loss: {stats['total_pnl']:+.2f} USD")
     
     if total > 0:
         avg_pnl = stats['total_pnl'] / total
-        print(f"� กำไรเฉลี่ยต่อ trade: {avg_pnl:+.2f} USD")
+        print(f"Average profit per trade: {avg_pnl:+.2f} USD")
         
         if stats['total_pnl'] > 0:
-            print("🎉 ทำกำไรสุทธิ!")
+            print("Net profit!")
         elif stats['total_pnl'] < 0:
-            print("📉 ขาดทุนสุทธิ")
+            print("Net loss")
         else:
-            print("➖ ทำกำไร/ขาดทุนตั้งศูนย์")
+            print("Break even")
     
-    print(f"⏰ เวลาทำงาน: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Runtime: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*50)
 
 def on_open(ws):
     print("="*60)
-    print("🤖 XAU Scalping Bot - TradingView Paper Trade Edition")
+    print("XAU Scalping Bot - TradingView Paper Trade Edition")
     print("="*60)
-    print(f"📡 Account ID: {TRADINGVIEW_ACCOUNT_ID}")
-    print(f"💰 Quantity: {TRADE_QTY} XAU per trade")
-    print(f"⚙️ Threshold: {CONFIDENCE_THRESHOLD*100}%")
-    print(f"⏰ Holding Time: {HOLDING_TIME} seconds")
-    print(f"🎯 Symbol: OANDA:XAUUSD")
-    print("🚀 Auto trading started...")
-    print(f"⏳ รอสะสมข้อมูล 5 วินาทีก่อนเริ่มทำนาย...")
+    print(f"Account ID: {TRADINGVIEW_ACCOUNT_ID}")
+    print(f"Quantity: {TRADE_QTY} XAU per trade")
+    print(f"Threshold: {CONFIDENCE_THRESHOLD*100}%")
+    print(f"Holding Time: {HOLDING_TIME} seconds")
+    print(f"Symbol: OANDA:XAUUSD")
+    print("Auto trading started...")
+    print(f"Waiting to accumulate 5 seconds of data before starting prediction...")
     
-    # # ทดสอบส่ง buy order ทันที
-    # print("\n" + "="*50)
-    # print("🧪 TESTING BUY ORDER NOW...")
-    # print("="*50)
     # test_result = place_order("buy", TRADE_QTY)
     # if test_result:
-    #     print("✅ Test buy successful! ไปดูใน TradingView ได้เลย")
+    #    print("Test buy successful! Check in TradingView")
     # else:
-    #     print("❌ Test buy failed! ตรวจสอบ session/headers")
-    # print("="*50 + "\n")
+    #    print("Test buy failed! Check session/headers")
 
 if __name__ == "__main__":
-    print("🔄 Starting XAU TradingView Bot...")
-    print("📡 Connecting to Binance WebSocket for XAU data...")
+    print("Starting XAU TradingView Bot...")
+    print("Connecting to Binance WebSocket for XAU data...")
     
     ws = websocket.WebSocketApp(
         SOCKET,
