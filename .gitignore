@@ -2,11 +2,13 @@
 *.csv
 !model_predictions.csv
 
-# Large model files
+# Large model files  
 *.json
-*.txt
 *.pkl
 *.joblib
+
+# Keep small prediction files
+!model_predictions.csv
 
 # Python
 __pycache__/
