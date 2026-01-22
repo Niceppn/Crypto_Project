@@ -11,7 +11,7 @@ from collections import deque
 # Configuration
 # ==========================================
 MODEL_FILE = '/Users/Macbook/Collect_Crypto/XAU/xauusdt_scalping_model_lgbm.txt'
-CONFIDENCE_THRESHOLD = 0.65
+CONFIDENCE_THRESHOLD = 0.3
 HOLDING_TIME = 5
 MIN_FLOW = 0.01
 SYMBOL = "xauusdt"

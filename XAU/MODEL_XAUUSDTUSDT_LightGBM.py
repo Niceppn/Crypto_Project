@@ -11,7 +11,7 @@ from sklearn.metrics import confusion_matrix, classification_report, precision_s
 # ==========================================
 RAW_FILE = '/Users/Macbook/Collect_Crypto/XAU/xauusdt_training_data.csv'
 MODEL_FILE = '/Users/Macbook/Collect_Crypto/XAU/xauusdt_scalping_model_lgbm.txt'  # LightGBM ใช้ .txt
-CONFIDENCE_THRESHOLD = 0.7
+CONFIDENCE_THRESHOLD = 0.65
 
 print(f"🔄 กำลังอ่านข้อมูลจาก {RAW_FILE}...")
 df = pd.read_csv(RAW_FILE)
