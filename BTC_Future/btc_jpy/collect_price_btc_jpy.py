@@ -16,6 +16,7 @@ SOCKET = f"wss://stream.binance.com:9443/ws/{SYMBOL}@aggTrade"
 FILENAME = "btcjpy_training_data.csv"
 RECONNECT_DELAY = 5  # seconds
 
+
 # =========================
 # CSV Helpers
 # =========================
