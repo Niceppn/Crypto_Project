@@ -9,7 +9,7 @@ from collections import deque
 # ⚙️ ตั้งค่า (Configuration)
 # ==========================================
 MODEL_FILE = '/Users/Macbook/Collect_Crypto/XAU/xauusdt_scalping_model_lgbm.txt'
-CONFIDENCE_THRESHOLD = 0.65
+CONFIDENCE_THRESHOLD = 0.55
 HOLDING_TIME = 5
 MIN_PROFIT = 0.01
 MIN_FLOW = 0.01
