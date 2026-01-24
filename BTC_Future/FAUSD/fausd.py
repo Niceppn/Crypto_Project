@@ -13,15 +13,15 @@ MODEL_FILE = "BTCFDUSD.txt"
 TG_TOKEN = "8555159238:AAFQPvIFMqqvi7PxhBvXv1zfurF7XaF_kWY"
 TG_CHAT_ID = "8440162744" 
 
-# --- Strategy ---
+# --- Dynamic Strategy Parameters ---
 CONFIDENCE_THRESHOLD = 0.40  
+CAPITAL_PER_TRADE = 5.1      
 HOLDING_TIME = 90            
 PROFIT_TARGET_PCT = 0.0001   
 COOLDOWN_SECONDS = 30        
 
 # --- Stats & State ---
 IS_RUNNING = True            
-CAPITAL_PER_TRADE = 5.1      
 stats = {'win': 0, 'loss': 0, 'breakeven': 0}
 total_pnl_cash = 0.0         
 
@@ -29,7 +29,7 @@ active_orders = []
 last_trade_time = 0
 last_report_time = datetime.datetime.now()
 
-# Terminal Colors (Standard ANSI)
+# Terminal Colors
 C_GREEN = "\033[92m"
 C_RED = "\033[91m"
 C_YELLOW = "\033[93m"
@@ -46,6 +46,7 @@ def send_tg_msg(msg):
 
 def telegram_worker():
     global IS_RUNNING, stats, total_pnl_cash, active_orders, last_report_time
+    global CONFIDENCE_THRESHOLD, CAPITAL_PER_TRADE
     last_update_id = 0
     while True:
         try:
@@ -55,7 +56,9 @@ def telegram_worker():
                 for update in res["result"]:
                     last_update_id = update["update_id"]
                     if "message" in update and "text" in update["message"]:
-                        cmd = update["message"]["text"].lower()
+                        full_text = update["message"]["text"].strip()
+                        args = full_text.split()
+                        cmd = args[0].lower()
                         
                         if cmd == "/start_bot":
                             IS_RUNNING = True
@@ -66,17 +69,29 @@ def telegram_worker():
                         elif cmd == "/status":
                             run_stat = "Running" if IS_RUNNING else "Stopped"
                             msg = (f"STATUS: {run_stat}\n"
+                                   f"CONF: {CONFIDENCE_THRESHOLD:.2f} | CAP: {CAPITAL_PER_TRADE:.2f}\n"
                                    f"Total PNL: {total_pnl_cash:.4f} FDUSD\n"
                                    f"Win: {stats['win']} | Loss: {stats['loss']}\n"
-                                   f"Active Orders: {len(active_orders)}")
+                                   f"Active: {len(active_orders)}")
                             send_tg_msg(msg)
+                        elif cmd == "/set_conf" and len(args) > 1:
+                            try:
+                                val = float(args[1])
+                                CONFIDENCE_THRESHOLD = val
+                                send_tg_msg(f"SUCCESS: Confident set to {val}")
+                            except: send_tg_msg("ERROR: Invalid number")
+                        elif cmd == "/set_cap" and len(args) > 1:
+                            try:
+                                val = float(args[1])
+                                CAPITAL_PER_TRADE = val
+                                send_tg_msg(f"SUCCESS: Capital set to {val}")
+                            except: send_tg_msg("ERROR: Invalid number")
                         elif cmd == "/reset":
                             stats = {'win': 0, 'loss': 0, 'breakeven': 0}
                             total_pnl_cash = 0.0
                             active_orders = [] 
                             last_report_time = datetime.datetime.now()
                             send_tg_msg("System Reset Completed.")
-                            print(f"\n{C_YELLOW}System Reset via Telegram{C_RESET}")
         except: pass
 
 threading.Thread(target=telegram_worker, daemon=True).start()
@@ -94,7 +109,7 @@ buffer = deque(maxlen=60)
 current_sec = {'net_flow': 0.0, 'total_volume': 0.0, 'trade_count': 0, 'close': 0.0, 'low': 999999.0, 'ts': None}
 
 # ==========================================
-# FUNCTIONS
+# TRADING LOGIC
 # ==========================================
 
 def check_orders(current_price, current_ts):
@@ -119,28 +134,21 @@ def check_orders(current_price, current_ts):
 def predict(data_list, last_price, current_ts):
     global active_orders, last_trade_time, total_pnl_cash, last_report_time
     
-    # Report every 30 minutes
     now = datetime.datetime.now()
     if (now - last_report_time).total_seconds() >= 1800:
         msg = (f"[30-Min Report]\nPNL: {total_pnl_cash:.4f} FDUSD\n"
-               f"Win: {stats['win']} | Loss: {stats['loss']}")
+               f"Conf: {CONFIDENCE_THRESHOLD} | Cap: {CAPITAL_PER_TRADE}")
         send_tg_msg(msg)
         last_report_time = now
 
     if not IS_RUNNING: return
     
-    # Cooldown Check
     if current_ts - last_trade_time < COOLDOWN_SECONDS:
-        remain = COOLDOWN_SECONDS - (current_ts - last_trade_time)
-        print(f"\rCooldown ({remain}s) | PNL: {total_pnl_cash:.4f}", end="")
         return
 
     df = pd.DataFrame(data_list)
-    if len(df) < 15: 
-        print(f"\rGathering Data... {len(df)}/15", end="")
-        return
+    if len(df) < 15: return
     
-    # Feature Engineering
     feat = {
         'total_volume': df['total_volume'].iloc[-1], 'net_flow': df['net_flow'].iloc[-1],
         'trade_count': df['trade_count'].iloc[-1],
@@ -161,7 +169,7 @@ def predict(data_list, last_price, current_ts):
     prob = model.predict(X)[0]
     
     pnl_color = C_GREEN if total_pnl_cash >= 0 else C_RED
-    print(f"\rPrice: {last_price:.2f} | Prob: {prob*100:.2f}% | PNL: {pnl_color}{total_pnl_cash:.4f}{C_RESET}", end="")
+    print(f"\rPrice: {last_price:.2f} | Prob: {prob*100:.2f}% | Conf: {CONFIDENCE_THRESHOLD} | PNL: {pnl_color}{total_pnl_cash:.4f}{C_RESET}", end="")
 
     if prob >= CONFIDENCE_THRESHOLD:
         quantity = CAPITAL_PER_TRADE / last_price
@@ -194,8 +202,8 @@ def on_message(ws, msg):
 # ==========================================
 # START
 # ==========================================
-print(f"--- Bot Started (Telegram Report Every 30 Min) ---")
-send_tg_msg(f"BOT ONLINE: {SYMBOL.upper()}\nCapital: {CAPITAL_PER_TRADE} FDUSD")
+print(f"--- Bot Started (Telegram Config Enabled) ---")
+send_tg_msg(f"BOT ONLINE\nConf: {CONFIDENCE_THRESHOLD}\nCap: {CAPITAL_PER_TRADE}")
 
 ws = websocket.WebSocketApp(f"wss://stream.binance.com:9443/ws/{SYMBOL}@aggTrade", on_message=on_message)
 ws.run_forever()
