@@ -7,7 +7,7 @@ from collections import deque
 # CONFIGURATION & TELEGRAM
 # ==========================================
 SYMBOL = "btcfdusd"
-MODEL_FILE = r"/Users/Macbook/autoCollectPrice/Maker_Free/BTCFDUSD.txt"
+MODEL_FILE = "BTCFDUSD.txt"
 
 TG_TOKEN = "8555159238:AAFQPvIFMqqvi7PxhBvXv1zfurF7XaF_kWY"
 TG_CHAT_ID = "8440162744" 
