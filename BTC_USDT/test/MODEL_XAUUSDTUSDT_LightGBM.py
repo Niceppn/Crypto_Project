@@ -7,29 +7,29 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report, precision_score
 
 # ==========================================
-# ⚙️ 1. ตั้งค่าและโหลดข้อมูล (Configuration)
+# 1. Configuration and Data Loading
 # ==========================================
-RAW_FILE = '/Users/Macbook/Collect_Crypto/btc_training_data.csv'
-MODEL_FILE = '/BTC_USDT/btc_scalping_model_lgbm.txt'  
-CONFIDENCE_THRESHOLD = 0.65
+RAW_FILE = '/Users/Macbook/Collect_Crypto/BTC_USDT/test/BTCJPY.csv'
+MODEL_FILE = '/Users/Macbook/Collect_Crypto/BTC_USDT/test/BTCJPY.txt' 
+CONFIDENCE_THRESHOLD = 0.7
 
-print(f"🔄 กำลังอ่านข้อมูลจาก {RAW_FILE}...")
+print(f"Reading data from {RAW_FILE}...")
 df = pd.read_csv(RAW_FILE)
 
-# แปลง timestamp
+# Convert timestamp
 ts_col = 'timestamp_ms' if 'timestamp_ms' in df.columns else 'timestamp'
 df['datetime'] = pd.to_datetime(df[ts_col], unit='ms')
 df = df.set_index('datetime')
 
 # ==========================================
-# 🛠️ 2. สร้าง Features (Feature Engineering)
+# 2. Feature Engineering
 # ==========================================
-print("⚙️ กำลังสร้าง Features ใหม่...")
+print("Creating new features...")
 
 # Signed Volume
 df['signed_volume'] = df.apply(lambda x: x['quantity'] if x['side'] == 'BUY' else -x['quantity'], axis=1)
 
-# ยุบรวมเป็นราย 1 วินาที
+# Aggregate to 1 second intervals
 df_1s = df.resample('1S').agg({
     'price': 'last',
     'quantity': 'sum',
@@ -73,7 +73,7 @@ df_1s['cumulative_net_flow_30'] = df_1s['net_flow'].rolling(30).sum()
 # ==========================================
 # 🎯 3. สร้าง Target (15 วินาทีข้างหน้า)
 # ==========================================
-df_1s['future_price'] = df_1s['close_price'].shift(-5)
+df_1s['future_price'] = df_1s['close_price'].shift(-10)
 df_1s['target'] = (df_1s['future_price'] > df_1s['close_price']).astype(int)
 
 # ลบ NaN

@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix, classification_report, precision_s
 # ==========================================
 # ⚙️ 1. ตั้งค่าและโหลดข้อมูล (Configuration)
 # ==========================================
-RAW_FILE = '/Users/Macbook/Collect_Crypto/Merge/merged_crypto_final.csv'
+RAW_FILE = '/Users/Macbook/Collect_Crypto/Merge/merged_crypto_data.csv'
 MODEL_FILE = 'merged_crypto_model_lgbm.txt'
 CONFIDENCE_THRESHOLD = 0.60
 
