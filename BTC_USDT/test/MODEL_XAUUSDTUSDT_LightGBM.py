@@ -10,7 +10,7 @@ from sklearn.metrics import confusion_matrix, classification_report, precision_s
 # 1. Configuration and Data Loading
 # ==========================================
 RAW_FILE = '/Users/Macbook/Collect_Crypto/BTC_USDT/test/BTCJPY.csv'
-MODEL_FILE = '/Users/Macbook/Collect_Crypto/BTC_USDT/test/BTCJPY.txt' 
+MODEL_FILE = '/Users/Macbook/Collect_Crypto/BTC_USDT/test/BTCJPY.txt'  # LightGBM uses .txt
 CONFIDENCE_THRESHOLD = 0.7
 
 print(f"Reading data from {RAW_FILE}...")
