@@ -8,7 +8,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 # โหลดข้อมูล
 print("📊 โหลดข้อมูล...")
-df = pd.read_csv('btc_training_data.csv')
+df = pd.read_csv('BTC_USDT/btc_training_data.csv')
 print(f"✅ โหลด {len(df):,} rows")
 
 # เตรียม Features

@@ -7,11 +7,11 @@ from datetime import datetime
 
 # --- ตั้งค่า ---
 # คู่เหรียญ (ตัวเล็กหมด)
-SYMBOL = "xauusdt"
+SYMBOL = "ethusdt"
 # เลือก Stream เป็น aggTrade (Trade ที่เกิดขึ้นจริง)
 SOCKET = f"wss://stream.binance.com:9443/ws/{SYMBOL}@aggTrade"
 # ชื่อไฟล์ที่จะบันทึก
-FILENAME = "xau_training_data.csv"
+FILENAME = "eth_training_data.csv"
 # --- ฟังก์ชันจัดการ CSV ---
 def init_csv():
     """สร้างไฟล์และเขียน Header ถ้ายังไม่มีไฟล์"""
