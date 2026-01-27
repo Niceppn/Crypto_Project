@@ -7,7 +7,7 @@ from collections import deque
 # CONFIGURATION & TELEGRAM
 # ==========================================
 SYMBOL = "btcusdc"
-MODEL_FILE = "/Users/Macbook/Collect_Crypto/BTC_Future/test/btcusdc_training_data.txt"
+MODEL_FILE = "btcusdc_training_data.txt"
 
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
 TG_CHAT_ID = "8440162744" 
