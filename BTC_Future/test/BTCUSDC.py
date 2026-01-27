@@ -7,7 +7,7 @@ from collections import deque
 # CONFIGURATION & TELEGRAM
 # ==========================================
 SYMBOL = "btcusdc"
-MODEL_FILE = "btcusdc_training_data.txt"
+MODEL_FILE = "/Users/Macbook/Collect_Crypto/BTC_Future/test/btcusdc_training_data.txt"
 
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
 TG_CHAT_ID = "8440162744" 
@@ -15,16 +15,16 @@ TG_CHAT_ID = "8440162744"
 # --- Dynamic Strategy Parameters ---
 CONFIDENCE_THRESHOLD = 0.40  
 CAPITAL_PER_TRADE = 5.1      
-HOLDING_TIME = 90            
+HOLDING_TIME = 150            
 PROFIT_TARGET_PCT = 0.0001   
-STOP_LOSS_PCT = 0.0005       # [เพิ่ม] เปอร์เซ็นต์ตัดขาดทุน (0.0005 = 0.05%)
+STOP_LOSS_PCT = 0.01       # [เพิ่ม] เปอร์เซ็นต์ตัดขาดทุน (0.01 = 1%)
 COOLDOWN_SECONDS = 30        
 
 # --- Stats & State ---
 IS_RUNNING = True            
 stats = {'win': 0, 'loss': 0, 'breakeven': 0}
 total_pnl_cash = 0.0         
-timeout_probs = deque(maxlen=50) # [เพิ่ม] เก็บค่า Prob ของไม้ที่ Time Exit
+timeout_probs = deque(maxlen=50) # เก็บค่า Prob ของไม้ที่ Time Exit
 
 active_orders = []
 last_trade_time = 0
@@ -43,7 +43,7 @@ C_RESET = "\033[0m"
 def model_reload_worker():
     global model
     while True:
-        time.sleep(1200) # 20 Minutes
+        time.sleep(1200) # แก้กลับเป็น 1200 วินาที (20 นาที) ตามคอมเมนต์
         try:
             new_model = lgb.Booster(model_file=MODEL_FILE)
             model = new_model
@@ -117,11 +117,13 @@ def telegram_worker():
                                 send_tg_msg("⏳ No timeout data yet.")
                             else:
                                 avg_p = sum(timeout_probs)/len(timeout_probs)
-                                last_5 = [f"{p*100:.1f}%" for p in list(timeout_probs)[-5:]]
-                                msg = (f"⏳ **TIMEOUT ANALYSIS** ⏳\n"
+                                # แก้ไขจากแสดง 5 ค่า เป็นแสดงทั้งหมดที่มีใน deque
+                                all_probs_str = ", ".join([f"{p*100:.1f}%" for p in timeout_probs])
+                                msg = (f"⏳ **TIMEOUT ANALYSIS (ALL)** ⏳\n"
                                        f"Count: {len(timeout_probs)} trades\n"
                                        f"Avg Prob: {avg_p*100:.2f}%\n"
-                                       f"Last 5: {', '.join(last_5)}")
+                                       f"--------------------\n"
+                                       f"History: {all_probs_str}")
                                 send_tg_msg(msg)
                         
                         elif cmd == "/reset":
@@ -182,7 +184,7 @@ def check_orders(current_price, current_ts):
             is_exit = True
             reason = "TP WIN (MAKER)"
         
-        # 2. เช็คจุดตัดขาดทุน [เพิ่ม]
+        # 2. เช็คจุดตัดขาดทุน
         elif current_price <= order['stop_loss']:
             is_exit = True
             reason = "STOP LOSS (SELL)"
@@ -251,7 +253,7 @@ def predict(data_list, last_price, current_ts):
 
     if prob >= CONFIDENCE_THRESHOLD:
         target_sell = last_price * (1 + PROFIT_TARGET_PCT)
-        stop_loss_price = last_price * (1 - STOP_LOSS_PCT) # [เพิ่ม] คำนวณราคา SL
+        stop_loss_price = last_price * (1 - STOP_LOSS_PCT)
         quantity = CAPITAL_PER_TRADE / last_price
         
         print(f"\n{C_CYAN}[BUY] Entry: {last_price:.2f} | TP: {target_sell:.2f} | SL: {stop_loss_price:.2f}{C_RESET}")
@@ -259,9 +261,9 @@ def predict(data_list, last_price, current_ts):
         active_orders.append({
             'entry': last_price, 'quantity': quantity,
             'take_profit': target_sell, 
-            'stop_loss': stop_loss_price, # [เพิ่ม]
+            'stop_loss': stop_loss_price,
             'exit_ts': current_ts + HOLDING_TIME,
-            'prob': prob # [เพิ่ม] เก็บไว้ทำสถิติ
+            'prob': prob
         })
         last_trade_time = current_ts
 
