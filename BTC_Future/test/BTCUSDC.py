@@ -15,7 +15,7 @@ TG_CHAT_ID = "8440162744"
 # --- Dynamic Strategy Parameters ---
 CONFIDENCE_THRESHOLD = 0.40  
 CAPITAL_PER_TRADE = 5.1      
-HOLDING_TIME = 150            
+HOLDING_TIME = 180            
 PROFIT_TARGET_PCT = 0.0001   
 STOP_LOSS_PCT = 0.01       # [เพิ่ม] เปอร์เซ็นต์ตัดขาดทุน (0.01 = 1%)
 COOLDOWN_SECONDS = 30        
@@ -43,7 +43,7 @@ C_RESET = "\033[0m"
 def model_reload_worker():
     global model
     while True:
-        time.sleep(1200) # แก้กลับเป็น 1200 วินาที (20 นาที) ตามคอมเมนต์
+        time.sleep(6000) # แก้กลับเป็น 1200 วินาที (20 นาที) ตามคอมเมนต์
         try:
             new_model = lgb.Booster(model_file=MODEL_FILE)
             model = new_model
@@ -65,6 +65,7 @@ def send_tg_msg(msg):
 def telegram_worker():
     global IS_RUNNING, stats, total_pnl_cash, active_orders, last_report_time
     global CONFIDENCE_THRESHOLD, CAPITAL_PER_TRADE, current_sec, model, STOP_LOSS_PCT, timeout_probs
+    global HOLDING_TIME
     last_update_id = 0
     while True:
         try:
@@ -107,7 +108,8 @@ def telegram_worker():
                                    f"State: {run_stat}\n"
                                    f"💰 Net PNL: {total_pnl_cash:.4f} FDUSD\n"
                                    f"🏆 Win: {stats['win']} | ❌ Loss: {stats['loss']}\n"
-                                   f"⚙️ Conf: {CONFIDENCE_THRESHOLD} | SL: {STOP_LOSS_PCT*100}%\n"
+                                   f"⚙️ Conf: {CONFIDENCE_THRESHOLD} | Hold: {HOLDING_TIME}s\n"
+                                   f"⚠️ SL: {STOP_LOSS_PCT*100}%\n"
                                    f"--------------------\n"
                                    f"{holding_msg}")
                             send_tg_msg(msg)
@@ -117,7 +119,6 @@ def telegram_worker():
                                 send_tg_msg("⏳ No timeout data yet.")
                             else:
                                 avg_p = sum(timeout_probs)/len(timeout_probs)
-                                # แก้ไขจากแสดง 5 ค่า เป็นแสดงทั้งหมดที่มีใน deque
                                 all_probs_str = ", ".join([f"{p*100:.1f}%" for p in timeout_probs])
                                 msg = (f"⏳ **TIMEOUT ANALYSIS (ALL)** ⏳\n"
                                        f"Count: {len(timeout_probs)} trades\n"
@@ -153,6 +154,13 @@ def telegram_worker():
                                 CAPITAL_PER_TRADE = val
                                 send_tg_msg(f"💰 Capital per trade set to: {val} FDUSD")
                             except: send_tg_msg("Error: Invalid number")
+
+                        elif cmd == "/set_hold" and len(args) > 1:
+                            try:
+                                val = int(args[1])
+                                HOLDING_TIME = val
+                                send_tg_msg(f"⏳ Holding Time set to: {val} seconds")
+                            except: send_tg_msg("Error: Invalid number (integer)")
         except: pass
 
 threading.Thread(target=telegram_worker, daemon=True).start()
@@ -179,17 +187,14 @@ def check_orders(current_price, current_ts):
         is_exit = False
         reason = ""
         
-        # 1. เช็คเป้ากำไร
         if current_price >= order['take_profit']:
             is_exit = True
             reason = "TP WIN (MAKER)"
         
-        # 2. เช็คจุดตัดขาดทุน
         elif current_price <= order['stop_loss']:
             is_exit = True
             reason = "STOP LOSS (SELL)"
 
-        # 3. เช็คหมดเวลา
         elif current_ts >= order['exit_ts']:
             is_exit = True
             reason = "TIME EXIT"
@@ -214,7 +219,7 @@ def check_orders(current_price, current_ts):
             active_orders.remove(order)
 
 def predict(data_list, last_price, current_ts):
-    global active_orders, last_trade_time, total_pnl_cash, last_report_time, model, STOP_LOSS_PCT
+    global active_orders, last_trade_time, total_pnl_cash, last_report_time, model, STOP_LOSS_PCT, HOLDING_TIME
     
     now = datetime.datetime.now()
     if (now - last_report_time).total_seconds() >= 1800:

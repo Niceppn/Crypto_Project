@@ -7,8 +7,8 @@ from sklearn.metrics import classification_report, precision_score
 # ==========================================
 # ⚙️ CONFIGURATION
 # ==========================================
-RAW_FILE = '/Users/Macbook/Collect_Crypto/BTC_Future/test/btcusdt_future_training_data.csv' # 🔴 แก้ Path ไฟล์ข้อมูลดิบของคุณ
-MODEL_OUTPUT = '/Users/Macbook/Collect_Crypto/BTC_Future/test/btcusdc_maker_model_lgbm.txt'     
+RAW_FILE = '/Users/Macbook/Collect_Crypto/BTC_Future/btcusdt_future_training_data.csv' # 🔴 แก้ Path ไฟล์ข้อมูลดิบของคุณ
+MODEL_OUTPUT = '/Users/Macbook/Collect_Crypto/BTC_Future/btc_maker_model_lgbm_maker.txt'     
 CONFIDENCE_THRESHOLD = 0.65
 
 print(f"🔄 Reading data from {RAW_FILE}...")
