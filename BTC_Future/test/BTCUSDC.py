@@ -15,16 +15,16 @@ TG_CHAT_ID = "8440162744"
 # --- Dynamic Strategy Parameters ---
 CONFIDENCE_THRESHOLD = 0.40  
 CAPITAL_PER_TRADE = 5.1      
-HOLDING_TIME = 180            
+HOLDING_TIME = 150            
 PROFIT_TARGET_PCT = 0.0001   
-STOP_LOSS_PCT = 0.01       # [เพิ่ม] เปอร์เซ็นต์ตัดขาดทุน (0.01 = 1%)
+STOP_LOSS_PCT = 0.01       
 COOLDOWN_SECONDS = 30        
 
 # --- Stats & State ---
 IS_RUNNING = True            
 stats = {'win': 0, 'loss': 0, 'breakeven': 0}
 total_pnl_cash = 0.0         
-timeout_probs = deque(maxlen=50) # เก็บค่า Prob ของไม้ที่ Time Exit
+timeout_probs = deque(maxlen=50)
 
 active_orders = []
 last_trade_time = 0
@@ -43,7 +43,7 @@ C_RESET = "\033[0m"
 def model_reload_worker():
     global model
     while True:
-        time.sleep(6000) # แก้กลับเป็น 1200 วินาที (20 นาที) ตามคอมเมนต์
+        time.sleep(6000)
         try:
             new_model = lgb.Booster(model_file=MODEL_FILE)
             model = new_model
@@ -95,7 +95,6 @@ def telegram_worker():
                         elif cmd == "/status":
                             run_stat = "RUNNING" if IS_RUNNING else "STOPPED"
                             cur_price = current_sec['close']
-                            
                             if active_orders:
                                 current_order = active_orders[0]
                                 holding_msg = (f"🟢 Buy: {current_order['entry']:.2f}\n"
@@ -145,7 +144,7 @@ def telegram_worker():
                             try:
                                 val = float(args[1])
                                 STOP_LOSS_PCT = val
-                                send_tg_msg(f"⚠️ Stop Loss set to: {val} (e.g. 0.001 = 0.1%)")
+                                send_tg_msg(f"⚠️ Stop Loss set to: {val}")
                             except: send_tg_msg("Error: Invalid number")
 
                         elif cmd == "/set_cap" and len(args) > 1:
@@ -186,18 +185,14 @@ def check_orders(current_price, current_ts):
     for order in active_orders[:]:
         is_exit = False
         reason = ""
+        now_str = datetime.datetime.now().strftime("%H:%M:%S")
         
         if current_price >= order['take_profit']:
-            is_exit = True
-            reason = "TP WIN (MAKER)"
-        
+            is_exit, reason = True, "TP WIN (MAKER)"
         elif current_price <= order['stop_loss']:
-            is_exit = True
-            reason = "STOP LOSS (SELL)"
-
+            is_exit, reason = True, "STOP LOSS (SELL)"
         elif current_ts >= order['exit_ts']:
-            is_exit = True
-            reason = "TIME EXIT"
+            is_exit, reason = True, "TIME EXIT"
             if 'prob' in order:
                 timeout_probs.append(order['prob'])
 
@@ -215,17 +210,17 @@ def check_orders(current_price, current_ts):
                 stats['breakeven'] += 1
                 color = C_YELLOW
             
-            print(f"\n{color}[{reason}] Sold: {current_price:.2f} | Net: {profit:.4f} FDUSD{C_RESET}")
+            print(f"\n{color}[{now_str}][{reason}] Sold: {current_price:.2f} | Net: {profit:.4f} FDUSD{C_RESET}")
             active_orders.remove(order)
 
 def predict(data_list, last_price, current_ts):
     global active_orders, last_trade_time, total_pnl_cash, last_report_time, model, STOP_LOSS_PCT, HOLDING_TIME
     
     now = datetime.datetime.now()
+    now_str = now.strftime("%H:%M:%S")
+
     if (now - last_report_time).total_seconds() >= 1800:
-        msg = (f"🕒 **30-Min Report**\n"
-               f"PNL: {total_pnl_cash:.4f} FDUSD\n"
-               f"W: {stats['win']} | L: {stats['loss']}")
+        msg = (f"🕒 **30-Min Report**\nPNL: {total_pnl_cash:.4f} FDUSD\nW: {stats['win']} | L: {stats['loss']}")
         send_tg_msg(msg)
         last_report_time = now
 
@@ -254,14 +249,15 @@ def predict(data_list, last_price, current_ts):
     prob = model.predict(X)[0]
     
     pnl_color = C_GREEN if total_pnl_cash >= 0 else C_RED
-    print(f"\rPrice: {last_price:.2f} | Prob: {prob*100:.2f}% | Net PNL: {pnl_color}{total_pnl_cash:.4f}{C_RESET}", end="")
+    # เพิ่ม [HH:mm:ss] ลงใน Log การ Predict
+    print(f"\r[{now_str}] Price: {last_price:.2f} | Prob: {prob*100:.2f}% | Net PNL: {pnl_color}{total_pnl_cash:.4f}{C_RESET}", end="")
 
     if prob >= CONFIDENCE_THRESHOLD:
         target_sell = last_price * (1 + PROFIT_TARGET_PCT)
         stop_loss_price = last_price * (1 - STOP_LOSS_PCT)
         quantity = CAPITAL_PER_TRADE / last_price
         
-        print(f"\n{C_CYAN}[BUY] Entry: {last_price:.2f} | TP: {target_sell:.2f} | SL: {stop_loss_price:.2f}{C_RESET}")
+        print(f"\n{C_CYAN}[{now_str}][BUY] Entry: {last_price:.2f} | TP: {target_sell:.2f} | SL: {stop_loss_price:.2f}{C_RESET}")
         
         active_orders.append({
             'entry': last_price, 'quantity': quantity,
@@ -294,8 +290,9 @@ def on_message(ws, msg):
 # ==========================================
 # START
 # ==========================================
-print(f"{C_CYAN}--- Bot Started: Silent Mode (30m Report / 20m Auto-Reload) ---{C_RESET}")
-send_tg_msg("🚀 BOT ONLINE (Silent Mode)\nReports every 30 mins.\nAuto-Reload Model every 20 mins.\nStop Loss & Timeout Stats Active.")
+start_now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+print(f"{C_CYAN}--- Bot Started: {start_now} ---{C_RESET}")
+send_tg_msg(f"🚀 BOT ONLINE\nStart Time: {start_now}\nReports every 30 mins.")
 
 ws = websocket.WebSocketApp(f"wss://fstream.binance.com/ws/{SYMBOL}@aggTrade", on_message=on_message)
 ws.run_forever()
