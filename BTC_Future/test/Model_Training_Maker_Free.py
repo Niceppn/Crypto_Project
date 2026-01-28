@@ -14,7 +14,7 @@ MODEL_DEST_PATH = '/Users/Macbook/Collect_Crypto/BTC_Future/test'
 # --- ปรับจูนกลยุทธ์ Zero Fee ---
 PROFIT_TARGET_PCT = 1.0003  # กำไร 0.03% ก็เอา (เหมาะกับไม่มีค่าธรรมเนียม)
 FILL_WINDOW = 20           # รอให้ราคาลงมา Match 20 วินาที
-PROFIT_WINDOW = 90        # รอให้ราคาขึ้นไปขาย 2 นาที
+PROFIT_WINDOW = 120        # รอให้ราคาขึ้นไปขาย 2 นาที
 CONFIDENCE_THRESHOLD = 0.55 # ลดระดับความมั่นใจลงเล็กน้อยเพื่อให้ AI ส่งสัญญาณบ่อยขึ้น
 
 if not os.path.exists(MODEL_DEST_PATH):
