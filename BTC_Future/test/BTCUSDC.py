@@ -14,10 +14,10 @@ TG_CHAT_ID = "8440162744"
 
 # --- Dynamic Strategy Parameters ---
 CONFIDENCE_THRESHOLD = 0.40  
-CAPITAL_PER_TRADE = 5.1      
-HOLDING_TIME = 180            
+CAPITAL_PER_TRADE = 50      
+HOLDING_TIME = 300            
 PROFIT_TARGET_PCT = 0.0001   
-STOP_LOSS_PCT = 0.001       # [เพิ่ม] เปอร์เซ็นต์ตัดขาดทุน (0.01 = 1%)
+STOP_LOSS_PCT = 0.0009       # [เพิ่ม] เปอร์เซ็นต์ตัดขาดทุน (0.01 = 1%)
 COOLDOWN_SECONDS = 30        
 
 # --- Stats & State ---
