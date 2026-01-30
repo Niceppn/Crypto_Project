@@ -23,7 +23,7 @@ SECRET_KEY = "ePHw4rwFMTrkwwmdruClXQzOSX9WRvMVFulDDWeAjkZvrHAGkEAIkr3h1HeCsqyv"
 # --- Strategy (สามารถปรับผ่าน Telegram ได้) ---
 CONFIDENCE_THRESHOLD = 0.40  # ความมั่นใจ AI (สามารถปรับได้)
 CAPITAL_PER_TRADE = 200      # ทุนต่อไม้ (สามารถปรับได้)
-HOLDING_TIME = 500           # วินาที (สามารถปรับได้)
+HOLDING_TIME = 2000           # วินาที (สามารถปรับได้)
 PROFIT_TARGET_PCT = 0.0002   # % (สามารถปรับได้)
 STOP_LOSS_PCT = 0.001        # % (สามารถปรับได้)
 MAKER_BUY_OFFSET_PCT = 0.00001
