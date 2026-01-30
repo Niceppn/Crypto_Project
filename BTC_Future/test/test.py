@@ -10,7 +10,7 @@ from binance.enums import *
 # ==========================================
 SYMBOL_WS = "btcusdc"       # ชื่อสำหรับ Websocket (ตัวเล็ก)
 SYMBOL_TRADE = "BTCUSDC"    # ชื่อสำหรับส่งคำสั่ง (ตัวใหญ่)
-MODEL_FILE = "/Users/Macbook/Collect_Crypto/BTC_Future/test/BTCUSDC.txt"
+MODEL_FILE = "BTCUSDC.txt"
 
 # --- TELEGRAM ---
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
