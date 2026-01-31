@@ -1,0 +1,153 @@
+{
+  "model_type": "improved_regularized",
+  "features": [
+    "order_flow_imbalance",
+    "aggressive_buy_ratio",
+    "net_flow_ma10",
+    "net_flow_ma30",
+    "cvd_60",
+    "cvd_300",
+    "volume_ma5",
+    "volume_ma15",
+    "volume_ma30",
+    "buy_volume_pct",
+    "sell_volume_pct",
+    "hl_range",
+    "oc_diff",
+    "body_to_range_ratio",
+    "price_change_pct_1",
+    "price_change_pct_5",
+    "price_change_pct_15",
+    "momentum_5",
+    "momentum_15",
+    "dist_from_ma5",
+    "dist_from_ma15",
+    "ma5_slope",
+    "trade_count",
+    "trade_frequency",
+    "atr_5",
+    "order_book_imbalance_proxy",
+    "spread_proxy",
+    "spread_ma5",
+    "spread_volatility",
+    "liquidity_ma15",
+    "volume_concentration",
+    "dow_sin",
+    "dow_cos",
+    "momentum_3",
+    "momentum_10",
+    "momentum_30",
+    "acceleration_5",
+    "acceleration_15",
+    "cvd_momentum_15",
+    "flow_reversal"
+  ],
+  "num_features": 40,
+  "training_samples": 202736,
+  "test_samples": 50685,
+  "regularization": {
+    "n_estimators": 150,
+    "learning_rate": 0.05,
+    "num_leaves": 15,
+    "max_depth": 4,
+    "min_child_samples": 200,
+    "reg_alpha": 0.1,
+    "reg_lambda": 0.1,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7
+  },
+  "target_criteria": {
+    "fill_window": 15,
+    "profit_window": 90,
+    "fill_offset": 0.0005,
+    "profit_target": 0.002
+  },
+  "target_distribution": {
+    "skip": 249548,
+    "buy": 1937,
+    "sell": 1936
+  },
+  "feature_importance": [
+    {
+      "feature": "volume_ma30",
+      "importance": 466
+    },
+    {
+      "feature": "momentum_30",
+      "importance": 452
+    },
+    {
+      "feature": "liquidity_ma15",
+      "importance": 381
+    },
+    {
+      "feature": "cvd_60",
+      "importance": 352
+    },
+    {
+      "feature": "spread_volatility",
+      "importance": 349
+    },
+    {
+      "feature": "dist_from_ma15",
+      "importance": 324
+    },
+    {
+      "feature": "cvd_300",
+      "importance": 282
+    },
+    {
+      "feature": "volume_ma15",
+      "importance": 237
+    },
+    {
+      "feature": "cvd_momentum_15",
+      "importance": 220
+    },
+    {
+      "feature": "price_change_pct_15",
+      "importance": 205
+    },
+    {
+      "feature": "net_flow_ma30",
+      "importance": 195
+    },
+    {
+      "feature": "atr_5",
+      "importance": 179
+    },
+    {
+      "feature": "spread_ma5",
+      "importance": 172
+    },
+    {
+      "feature": "momentum_10",
+      "importance": 169
+    },
+    {
+      "feature": "net_flow_ma10",
+      "importance": 141
+    },
+    {
+      "feature": "momentum_15",
+      "importance": 139
+    },
+    {
+      "feature": "dow_sin",
+      "importance": 137
+    },
+    {
+      "feature": "dist_from_ma5",
+      "importance": 136
+    },
+    {
+      "feature": "volume_ma5",
+      "importance": 111
+    },
+    {
+      "feature": "acceleration_15",
+      "importance": 101
+    }
+  ],
+  "best_iteration": 150
+}

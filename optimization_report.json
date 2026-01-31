@@ -1,0 +1,1421 @@
+{
+    "best_params": {
+        "PREDICTION_THRESHOLD": 0.07066991123570512,
+        "TP_RATIO": 0.8327667628038818,
+        "HOLDING_TIME": 520,
+        "STOP_LOSS_PCT": 0.0016948395526367622,
+        "MAKER_BUY_OFFSET_PCT": 9.136769371871522e-05,
+        "MAKER_ORDER_TIMEOUT": 86
+    },
+    "metrics": {
+        "total_pnl": -31.95554852277031,
+        "win_rate": 52.91943828529194,
+        "score": -2.684104614596475,
+        "max_drawdown": -2838.4634913263544,
+        "total_trades": 1353,
+        "best_hour": 18,
+        "best_day": "Tuesday"
+    },
+    "all_trials": [
+        {
+            "number": 0,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06306944296119736,
+                "TP_RATIO": 0.5985521691569795,
+                "HOLDING_TIME": 441,
+                "STOP_LOSS_PCT": 0.0018428853902626582,
+                "MAKER_BUY_OFFSET_PCT": 5.0691843638744644e-05,
+                "MAKER_ORDER_TIMEOUT": 31
+            },
+            "score": -4.3195528919229265,
+            "total_pnl": -48.21582933798414,
+            "win_rate": 58.7651598676957
+        },
+        {
+            "number": 1,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.030385005050215054,
+                "TP_RATIO": 0.841121040993708,
+                "HOLDING_TIME": 333,
+                "STOP_LOSS_PCT": 0.0013347280225662005,
+                "MAKER_BUY_OFFSET_PCT": 7.607201874504763e-05,
+                "MAKER_ORDER_TIMEOUT": 33
+            },
+            "score": -4.808060267639226,
+            "total_pnl": -53.84019420231249,
+            "win_rate": 47.673810768426556
+        },
+        {
+            "number": 2,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07765377462053613,
+                "TP_RATIO": 0.5324106240332754,
+                "HOLDING_TIME": 510,
+                "STOP_LOSS_PCT": 0.0014791812661121477,
+                "MAKER_BUY_OFFSET_PCT": 2.265729144257494e-05,
+                "MAKER_ORDER_TIMEOUT": 101
+            },
+            "score": -4.0606583088473425,
+            "total_pnl": -51.79169040382068,
+            "win_rate": 57.90586991010047
+        },
+        {
+            "number": 3,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.059067072077965535,
+                "TP_RATIO": 0.7689483033886048,
+                "HOLDING_TIME": 106,
+                "STOP_LOSS_PCT": 0.001136274948596724,
+                "MAKER_BUY_OFFSET_PCT": 3.011216256142187e-05,
+                "MAKER_ORDER_TIMEOUT": 45
+            },
+            "score": -6.158416455054341,
+            "total_pnl": -77.36072159311176,
+            "win_rate": 44.78398314014753
+        },
+        {
+            "number": 4,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.05470586513735247,
+                "TP_RATIO": 0.8398502279447299,
+                "HOLDING_TIME": 461,
+                "STOP_LOSS_PCT": 0.0017655151024162574,
+                "MAKER_BUY_OFFSET_PCT": 4.9438530469219654e-05,
+                "MAKER_ORDER_TIMEOUT": 52
+            },
+            "score": -3.772740550793624,
+            "total_pnl": -41.34132620712972,
+            "win_rate": 51.66101694915254
+        },
+        {
+            "number": 5,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06519449660120097,
+                "TP_RATIO": 0.5482041617894713,
+                "HOLDING_TIME": 258,
+                "STOP_LOSS_PCT": 0.0008522469499696038,
+                "MAKER_BUY_OFFSET_PCT": 5.84772869095996e-05,
+                "MAKER_ORDER_TIMEOUT": 84
+            },
+            "score": -7.01271379146532,
+            "total_pnl": -75.6518981453963,
+            "win_rate": 47.30809308787774
+        },
+        {
+            "number": 6,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.0412620700044513,
+                "TP_RATIO": 0.7294584531323708,
+                "HOLDING_TIME": 302,
+                "STOP_LOSS_PCT": 0.0014072670543079067,
+                "MAKER_BUY_OFFSET_PCT": 2.3197466290519033e-05,
+                "MAKER_ORDER_TIMEOUT": 58
+            },
+            "score": -4.967699713335366,
+            "total_pnl": -58.513913306745394,
+            "win_rate": 49.83181162902451
+        },
+        {
+            "number": 7,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.05710220904683772,
+                "TP_RATIO": 0.5580021272503863,
+                "HOLDING_TIME": 266,
+                "STOP_LOSS_PCT": 0.0011603840517825119,
+                "MAKER_BUY_OFFSET_PCT": 5.759596166677568e-05,
+                "MAKER_ORDER_TIMEOUT": 32
+            },
+            "score": -5.7146354091922085,
+            "total_pnl": -60.16243570757663,
+            "win_rate": 52.07561156412157
+        },
+        {
+            "number": 8,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.05465794649169037,
+                "TP_RATIO": 0.5794867277525207,
+                "HOLDING_TIME": 560,
+                "STOP_LOSS_PCT": 0.001924312717235122,
+                "MAKER_BUY_OFFSET_PCT": 3.280620087713119e-05,
+                "MAKER_ORDER_TIMEOUT": 56
+            },
+            "score": -3.933514181286086,
+            "total_pnl": -43.78927794454125,
+            "win_rate": 59.863945578231295
+        },
+        {
+            "number": 9,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.05445017860519906,
+                "TP_RATIO": 0.7519402788508017,
+                "HOLDING_TIME": 197,
+                "STOP_LOSS_PCT": 0.0011239170141792811,
+                "MAKER_BUY_OFFSET_PCT": 8.048648277916871e-05,
+                "MAKER_ORDER_TIMEOUT": 118
+            },
+            "score": -4.743473106199647,
+            "total_pnl": -57.898124851867955,
+            "win_rate": 45.50513698630137
+        },
+        {
+            "number": 10,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.02015067052289097,
+                "TP_RATIO": 0.8928128692262237,
+                "HOLDING_TIME": 441,
+                "STOP_LOSS_PCT": 0.0016660684119536929,
+                "MAKER_BUY_OFFSET_PCT": 9.868792209333083e-05,
+                "MAKER_ORDER_TIMEOUT": 76
+            },
+            "score": -3.6262925461040414,
+            "total_pnl": -40.759158725844216,
+            "win_rate": 49.679715302491104
+        },
+        {
+            "number": 11,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.02112728707479123,
+                "TP_RATIO": 0.8959934736768346,
+                "HOLDING_TIME": 429,
+                "STOP_LOSS_PCT": 0.0017146610343875789,
+                "MAKER_BUY_OFFSET_PCT": 9.660924726087198e-05,
+                "MAKER_ORDER_TIMEOUT": 75
+            },
+            "score": -3.7714622873077794,
+            "total_pnl": -41.41246027645257,
+            "win_rate": 50.24875621890548
+        },
+        {
+            "number": 12,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.02155005888333318,
+                "TP_RATIO": 0.8937930735131473,
+                "HOLDING_TIME": 386,
+                "STOP_LOSS_PCT": 0.0016720540830101537,
+                "MAKER_BUY_OFFSET_PCT": 9.814039564995207e-05,
+                "MAKER_ORDER_TIMEOUT": 76
+            },
+            "score": -3.8109637065667443,
+            "total_pnl": -43.39427474119071,
+            "win_rate": 48.82629107981221
+        },
+        {
+            "number": 13,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.02242916096850256,
+                "TP_RATIO": 0.8975232205615774,
+                "HOLDING_TIME": 400,
+                "STOP_LOSS_PCT": 0.0016047479682744416,
+                "MAKER_BUY_OFFSET_PCT": 9.859492324281011e-05,
+                "MAKER_ORDER_TIMEOUT": 85
+            },
+            "score": -4.233726684938949,
+            "total_pnl": -46.96201631265416,
+            "win_rate": 48.44384303112314
+        },
+        {
+            "number": 14,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.036724701806074456,
+                "TP_RATIO": 0.657139916315982,
+                "HOLDING_TIME": 525,
+                "STOP_LOSS_PCT": 0.0005687032712487711,
+                "MAKER_BUY_OFFSET_PCT": 8.427629398610085e-05,
+                "MAKER_ORDER_TIMEOUT": 68
+            },
+            "score": -6.5420666862474235,
+            "total_pnl": -72.20343257630996,
+            "win_rate": 36.681222707423586
+        },
+        {
+            "number": 15,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.029800212526838468,
+                "TP_RATIO": 0.8151267621646099,
+                "HOLDING_TIME": 459,
+                "STOP_LOSS_PCT": 0.00195343258452745,
+                "MAKER_BUY_OFFSET_PCT": 8.903938582075769e-05,
+                "MAKER_ORDER_TIMEOUT": 96
+            },
+            "score": -3.8774599569961894,
+            "total_pnl": -42.430263076587295,
+            "win_rate": 52.516411378555794
+        },
+        {
+            "number": 16,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.04400091992900144,
+                "TP_RATIO": 0.8007826203704244,
+                "HOLDING_TIME": 373,
+                "STOP_LOSS_PCT": 0.0015681271573505687,
+                "MAKER_BUY_OFFSET_PCT": 7.230332208832055e-05,
+                "MAKER_ORDER_TIMEOUT": 68
+            },
+            "score": -4.399809989684154,
+            "total_pnl": -48.74969623528464,
+            "win_rate": 49.90814451928965
+        },
+        {
+            "number": 17,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.028259437841851687,
+                "TP_RATIO": 0.6469172378448949,
+                "HOLDING_TIME": 590,
+                "STOP_LOSS_PCT": 0.0017239951214650519,
+                "MAKER_BUY_OFFSET_PCT": 6.533142006120052e-05,
+                "MAKER_ORDER_TIMEOUT": 99
+            },
+            "score": -3.5741940839926505,
+            "total_pnl": -39.8863598392423,
+            "win_rate": 57.397622192866585
+        },
+        {
+            "number": 18,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.03103596528172247,
+                "TP_RATIO": 0.6615425624217097,
+                "HOLDING_TIME": 600,
+                "STOP_LOSS_PCT": 0.0009884907935245818,
+                "MAKER_BUY_OFFSET_PCT": 6.773947369903246e-05,
+                "MAKER_ORDER_TIMEOUT": 110
+            },
+            "score": -4.3933755530281315,
+            "total_pnl": -49.15197996409644,
+            "win_rate": 48.868110236220474
+        },
+        {
+            "number": 19,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.02751670352825046,
+                "TP_RATIO": 0.658858235332402,
+                "HOLDING_TIME": 506,
+                "STOP_LOSS_PCT": 0.001987078973969717,
+                "MAKER_BUY_OFFSET_PCT": 4.091891629207931e-05,
+                "MAKER_ORDER_TIMEOUT": 95
+            },
+            "score": -3.917722590528764,
+            "total_pnl": -43.4675495078302,
+            "win_rate": 57.98542080848244
+        },
+        {
+            "number": 20,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.03766870652717773,
+                "TP_RATIO": 0.6935198166014067,
+                "HOLDING_TIME": 579,
+                "STOP_LOSS_PCT": 0.0014912814164178712,
+                "MAKER_BUY_OFFSET_PCT": 6.68524848572101e-05,
+                "MAKER_ORDER_TIMEOUT": 108
+            },
+            "score": -4.08585382434776,
+            "total_pnl": -46.00399513668787,
+            "win_rate": 54.44794952681388
+        },
+        {
+            "number": 21,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.020199684814192872,
+                "TP_RATIO": 0.8649379290309285,
+                "HOLDING_TIME": 538,
+                "STOP_LOSS_PCT": 0.001734785228516492,
+                "MAKER_BUY_OFFSET_PCT": 9.113146076421565e-05,
+                "MAKER_ORDER_TIMEOUT": 86
+            },
+            "score": -3.5839936817628204,
+            "total_pnl": -39.05837278395161,
+            "win_rate": 51.843317972350235
+        },
+        {
+            "number": 22,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.025782809997766505,
+                "TP_RATIO": 0.6177442800568852,
+                "HOLDING_TIME": 539,
+                "STOP_LOSS_PCT": 0.0018022109331450118,
+                "MAKER_BUY_OFFSET_PCT": 8.811551058429345e-05,
+                "MAKER_ORDER_TIMEOUT": 86
+            },
+            "score": -3.9170685682994724,
+            "total_pnl": -43.357351912123384,
+            "win_rate": 58.26771653543307
+        },
+        {
+            "number": 23,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.020040866310768873,
+                "TP_RATIO": 0.8442874265939094,
+                "HOLDING_TIME": 474,
+                "STOP_LOSS_PCT": 0.001606860071124394,
+                "MAKER_BUY_OFFSET_PCT": 9.048422114539045e-05,
+                "MAKER_ORDER_TIMEOUT": 93
+            },
+            "score": -3.9006490937305576,
+            "total_pnl": -42.79142634008597,
+            "win_rate": 50.24526979677646
+        },
+        {
+            "number": 24,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.03501762811147209,
+                "TP_RATIO": 0.8669833723629765,
+                "HOLDING_TIME": 600,
+                "STOP_LOSS_PCT": 0.0012928429848015723,
+                "MAKER_BUY_OFFSET_PCT": 8.105360243674067e-05,
+                "MAKER_ORDER_TIMEOUT": 76
+            },
+            "score": -4.805758182476904,
+            "total_pnl": -53.85335445740911,
+            "win_rate": 46.14343707713126
+        },
+        {
+            "number": 25,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.04569272908971916,
+                "TP_RATIO": 0.5080280475590068,
+                "HOLDING_TIME": 497,
+                "STOP_LOSS_PCT": 0.0017851853285135045,
+                "MAKER_BUY_OFFSET_PCT": 6.543181489896168e-05,
+                "MAKER_ORDER_TIMEOUT": 104
+            },
+            "score": -4.129681565753066,
+            "total_pnl": -45.275189992662376,
+            "win_rate": 61.958997722095674
+        },
+        {
+            "number": 26,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.026176049384278383,
+                "TP_RATIO": 0.7048223418139213,
+                "HOLDING_TIME": 549,
+                "STOP_LOSS_PCT": 0.0015225248570063662,
+                "MAKER_BUY_OFFSET_PCT": 1.4444771619153276e-05,
+                "MAKER_ORDER_TIMEOUT": 118
+            },
+            "score": -3.733485669685472,
+            "total_pnl": -42.62039406507586,
+            "win_rate": 53.81222432262129
+        },
+        {
+            "number": 27,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.03327511077353591,
+                "TP_RATIO": 0.7964401202219319,
+                "HOLDING_TIME": 554,
+                "STOP_LOSS_PCT": 0.0018717727937033876,
+                "MAKER_BUY_OFFSET_PCT": 7.531171268585537e-05,
+                "MAKER_ORDER_TIMEOUT": 90
+            },
+            "score": -3.8505297700866516,
+            "total_pnl": -42.001838211489165,
+            "win_rate": 53.98915569326104
+        },
+        {
+            "number": 28,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.02567523319682905,
+                "TP_RATIO": 0.7701511798774653,
+                "HOLDING_TIME": 418,
+                "STOP_LOSS_PCT": 0.0016645635372090416,
+                "MAKER_BUY_OFFSET_PCT": 9.267112332805717e-05,
+                "MAKER_ORDER_TIMEOUT": 65
+            },
+            "score": -3.8313732924822954,
+            "total_pnl": -42.826309884642924,
+            "win_rate": 52.97504798464492
+        },
+        {
+            "number": 29,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06669714701888638,
+                "TP_RATIO": 0.6043988318373177,
+                "HOLDING_TIME": 357,
+                "STOP_LOSS_PCT": 0.0018479315216713365,
+                "MAKER_BUY_OFFSET_PCT": 4.607763708626601e-05,
+                "MAKER_ORDER_TIMEOUT": 83
+            },
+            "score": -4.287302097819028,
+            "total_pnl": -49.285386313544905,
+            "win_rate": 55.29347229840922
+        },
+        {
+            "number": 30,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.0479622118229884,
+                "TP_RATIO": 0.6422394970422787,
+                "HOLDING_TIME": 477,
+                "STOP_LOSS_PCT": 0.0013932978489570565,
+                "MAKER_BUY_OFFSET_PCT": 8.571088193281369e-05,
+                "MAKER_ORDER_TIMEOUT": 81
+            },
+            "score": -4.253179970128746,
+            "total_pnl": -47.95537787988655,
+            "win_rate": 53.42388228636107
+        },
+        {
+            "number": 31,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.02464441385781358,
+                "TP_RATIO": 0.7051351756377158,
+                "HOLDING_TIME": 548,
+                "STOP_LOSS_PCT": 0.0015081011869696155,
+                "MAKER_BUY_OFFSET_PCT": 1.1288407564581447e-05,
+                "MAKER_ORDER_TIMEOUT": 114
+            },
+            "score": -4.125773802413024,
+            "total_pnl": -47.38981050776482,
+            "win_rate": 53.484107579462105
+        },
+        {
+            "number": 32,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.027237277460504722,
+                "TP_RATIO": 0.6944877597650841,
+                "HOLDING_TIME": 571,
+                "STOP_LOSS_PCT": 0.0016996775990978257,
+                "MAKER_BUY_OFFSET_PCT": 3.9837741262030074e-05,
+                "MAKER_ORDER_TIMEOUT": 120
+            },
+            "score": -4.412502637095292,
+            "total_pnl": -48.093658180327516,
+            "win_rate": 55.540631296171924
+        },
+        {
+            "number": 33,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.030626338017948014,
+                "TP_RATIO": 0.8605849629913287,
+                "HOLDING_TIME": 517,
+                "STOP_LOSS_PCT": 0.0015750750960200224,
+                "MAKER_BUY_OFFSET_PCT": 1.0769658774242925e-05,
+                "MAKER_ORDER_TIMEOUT": 100
+            },
+            "score": -3.6192819270353835,
+            "total_pnl": -41.21828030248741,
+            "win_rate": 50.26666666666667
+        },
+        {
+            "number": 34,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.03265923030855296,
+                "TP_RATIO": 0.8655340004815673,
+                "HOLDING_TIME": 507,
+                "STOP_LOSS_PCT": 0.0013930939628993711,
+                "MAKER_BUY_OFFSET_PCT": 6.174694140321005e-05,
+                "MAKER_ORDER_TIMEOUT": 105
+            },
+            "score": -3.8437784304372387,
+            "total_pnl": -44.755385634445986,
+            "win_rate": 48.026315789473685
+        },
+        {
+            "number": 35,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.03990846523561653,
+                "TP_RATIO": 0.8663282611173131,
+                "HOLDING_TIME": 77,
+                "STOP_LOSS_PCT": 0.0018716916699782439,
+                "MAKER_BUY_OFFSET_PCT": 5.366826670422641e-05,
+                "MAKER_ORDER_TIMEOUT": 97
+            },
+            "score": -5.9386946447343405,
+            "total_pnl": -73.1038331019063,
+            "win_rate": 45.33965244865718
+        },
+        {
+            "number": 36,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.0780249048784579,
+                "TP_RATIO": 0.8277505716598701,
+                "HOLDING_TIME": 438,
+                "STOP_LOSS_PCT": 0.0017333980493313768,
+                "MAKER_BUY_OFFSET_PCT": 7.830713516135145e-05,
+                "MAKER_ORDER_TIMEOUT": 90
+            },
+            "score": -3.1175674702601786,
+            "total_pnl": -36.48941044844107,
+            "win_rate": 51.69252468265162
+        },
+        {
+            "number": 37,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07238508045814093,
+                "TP_RATIO": 0.8228875493743815,
+                "HOLDING_TIME": 493,
+                "STOP_LOSS_PCT": 0.0017781254151757343,
+                "MAKER_BUY_OFFSET_PCT": 7.284316064391994e-05,
+                "MAKER_ORDER_TIMEOUT": 100
+            },
+            "score": -3.358864990159246,
+            "total_pnl": -40.41347304961788,
+            "win_rate": 51.59377316530763
+        },
+        {
+            "number": 38,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07451066678741539,
+                "TP_RATIO": 0.8257055348900291,
+                "HOLDING_TIME": 325,
+                "STOP_LOSS_PCT": 0.0017578169541044156,
+                "MAKER_BUY_OFFSET_PCT": 7.153298385125576e-05,
+                "MAKER_ORDER_TIMEOUT": 88
+            },
+            "score": -3.536481166964742,
+            "total_pnl": -44.081027695470965,
+            "win_rate": 49.63547995139733
+        },
+        {
+            "number": 39,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.0794186761801292,
+                "TP_RATIO": 0.8260215515285675,
+                "HOLDING_TIME": 312,
+                "STOP_LOSS_PCT": 0.0019997320827347454,
+                "MAKER_BUY_OFFSET_PCT": 7.039035136431112e-05,
+                "MAKER_ORDER_TIMEOUT": 90
+            },
+            "score": -3.6479868126946475,
+            "total_pnl": -44.42355943700932,
+            "win_rate": 49.0613266583229
+        },
+        {
+            "number": 40,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07409855323444285,
+                "TP_RATIO": 0.7627286665505331,
+                "HOLDING_TIME": 185,
+                "STOP_LOSS_PCT": 0.000696742828966369,
+                "MAKER_BUY_OFFSET_PCT": 7.788669556945851e-05,
+                "MAKER_ORDER_TIMEOUT": 100
+            },
+            "score": -4.951169534430144,
+            "total_pnl": -61.31902833795031,
+            "win_rate": 40.20436927413672
+        },
+        {
+            "number": 41,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07271297645414158,
+                "TP_RATIO": 0.7872323006646416,
+                "HOLDING_TIME": 347,
+                "STOP_LOSS_PCT": 0.0018011218451455015,
+                "MAKER_BUY_OFFSET_PCT": 6.166464422289599e-05,
+                "MAKER_ORDER_TIMEOUT": 90
+            },
+            "score": -3.909595902194664,
+            "total_pnl": -48.35898636084192,
+            "win_rate": 49.93757802746567
+        },
+        {
+            "number": 42,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.0713139494048169,
+                "TP_RATIO": 0.8394223464836347,
+                "HOLDING_TIME": 230,
+                "STOP_LOSS_PCT": 0.0017362516900045288,
+                "MAKER_BUY_OFFSET_PCT": 7.552018997141666e-05,
+                "MAKER_ORDER_TIMEOUT": 40
+            },
+            "score": -4.563057677534629,
+            "total_pnl": -52.60281576199062,
+            "win_rate": 47.59332023575639
+        },
+        {
+            "number": 43,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07614125183634976,
+                "TP_RATIO": 0.8159206544371849,
+                "HOLDING_TIME": 304,
+                "STOP_LOSS_PCT": 0.0019018488668100274,
+                "MAKER_BUY_OFFSET_PCT": 8.215595014728004e-05,
+                "MAKER_ORDER_TIMEOUT": 89
+            },
+            "score": -3.99402852795205,
+            "total_pnl": -50.125711698946276,
+            "win_rate": 48.97959183673469
+        },
+        {
+            "number": 44,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06587308714830785,
+                "TP_RATIO": 0.7348776731859968,
+                "HOLDING_TIME": 450,
+                "STOP_LOSS_PCT": 0.0017928452325774674,
+                "MAKER_BUY_OFFSET_PCT": 6.18982341279763e-05,
+                "MAKER_ORDER_TIMEOUT": 79
+            },
+            "score": -4.020953475108717,
+            "total_pnl": -46.11429152005743,
+            "win_rate": 54.17488494411571
+        },
+        {
+            "number": 45,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06986510764889795,
+                "TP_RATIO": 0.8416245565663582,
+                "HOLDING_TIME": 277,
+                "STOP_LOSS_PCT": 0.0012147942632064997,
+                "MAKER_BUY_OFFSET_PCT": 7.19373968556244e-05,
+                "MAKER_ORDER_TIMEOUT": 105
+            },
+            "score": -4.393615956330191,
+            "total_pnl": -53.736441925848084,
+            "win_rate": 46.493902439024396
+        },
+        {
+            "number": 46,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.060592660589828,
+                "TP_RATIO": 0.7814166652122797,
+                "HOLDING_TIME": 414,
+                "STOP_LOSS_PCT": 0.001640882793539897,
+                "MAKER_BUY_OFFSET_PCT": 7.797440909529808e-05,
+                "MAKER_ORDER_TIMEOUT": 98
+            },
+            "score": -4.30109913557491,
+            "total_pnl": -48.564382823795526,
+            "win_rate": 50.06476683937824
+        },
+        {
+            "number": 47,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07643794239820449,
+                "TP_RATIO": 0.8079066747920476,
+                "HOLDING_TIME": 491,
+                "STOP_LOSS_PCT": 0.0017330899409429366,
+                "MAKER_BUY_OFFSET_PCT": 9.348423648568186e-05,
+                "MAKER_ORDER_TIMEOUT": 86
+            },
+            "score": -3.1670322869937015,
+            "total_pnl": -37.13793779717116,
+            "win_rate": 52.885317750182615
+        },
+        {
+            "number": 48,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07613567027039536,
+                "TP_RATIO": 0.745096219430018,
+                "HOLDING_TIME": 483,
+                "STOP_LOSS_PCT": 0.0014472484784141633,
+                "MAKER_BUY_OFFSET_PCT": 5.884311560593085e-05,
+                "MAKER_ORDER_TIMEOUT": 94
+            },
+            "score": -4.065081193847408,
+            "total_pnl": -47.83428845361711,
+            "win_rate": 50.286077558804834
+        },
+        {
+            "number": 49,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06918261122454525,
+                "TP_RATIO": 0.823027107775792,
+                "HOLDING_TIME": 379,
+                "STOP_LOSS_PCT": 0.0019259033586870946,
+                "MAKER_BUY_OFFSET_PCT": 5.3868742255721086e-05,
+                "MAKER_ORDER_TIMEOUT": 110
+            },
+            "score": -3.4034395213842012,
+            "total_pnl": -41.6932946332383,
+            "win_rate": 51.74029451137885
+        },
+        {
+            "number": 50,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06849826027474863,
+                "TP_RATIO": 0.8077008687936212,
+                "HOLDING_TIME": 383,
+                "STOP_LOSS_PCT": 0.0019294440199459355,
+                "MAKER_BUY_OFFSET_PCT": 5.1234190240221394e-05,
+                "MAKER_ORDER_TIMEOUT": 112
+            },
+            "score": -3.637678274577469,
+            "total_pnl": -44.4064817884509,
+            "win_rate": 51.928191489361694
+        },
+        {
+            "number": 51,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07910070533682154,
+                "TP_RATIO": 0.8317663975850929,
+                "HOLDING_TIME": 435,
+                "STOP_LOSS_PCT": 0.0017441403110467271,
+                "MAKER_BUY_OFFSET_PCT": 5.6257804006619345e-05,
+                "MAKER_ORDER_TIMEOUT": 102
+            },
+            "score": -3.2913002434571585,
+            "total_pnl": -38.39669453780885,
+            "win_rate": 51.21602288984263
+        },
+        {
+            "number": 52,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.0797098402535334,
+                "TP_RATIO": 0.8194832964222645,
+                "HOLDING_TIME": 333,
+                "STOP_LOSS_PCT": 0.0018513687557425362,
+                "MAKER_BUY_OFFSET_PCT": 4.645944423285186e-05,
+                "MAKER_ORDER_TIMEOUT": 103
+            },
+            "score": -3.723917233795167,
+            "total_pnl": -46.137178572220115,
+            "win_rate": 50.47438330170778
+        },
+        {
+            "number": 53,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07452428700133863,
+                "TP_RATIO": 0.8310879109416821,
+                "HOLDING_TIME": 448,
+                "STOP_LOSS_PCT": 0.0019274670533307708,
+                "MAKER_BUY_OFFSET_PCT": 9.451626216710664e-05,
+                "MAKER_ORDER_TIMEOUT": 108
+            },
+            "score": -2.995809724791737,
+            "total_pnl": -34.14326292603104,
+            "win_rate": 52.90178571428571
+        },
+        {
+            "number": 54,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06350526598550531,
+                "TP_RATIO": 0.8477751820941746,
+                "HOLDING_TIME": 406,
+                "STOP_LOSS_PCT": 0.001940441473083534,
+                "MAKER_BUY_OFFSET_PCT": 9.683330328477751e-05,
+                "MAKER_ORDER_TIMEOUT": 108
+            },
+            "score": -3.4858384944605127,
+            "total_pnl": -38.88522284799991,
+            "win_rate": 51.06539309331374
+        },
+        {
+            "number": 55,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07772801785648029,
+                "TP_RATIO": 0.7874926577990079,
+                "HOLDING_TIME": 422,
+                "STOP_LOSS_PCT": 0.001896119515695622,
+                "MAKER_BUY_OFFSET_PCT": 9.337676312691955e-05,
+                "MAKER_ORDER_TIMEOUT": 115
+            },
+            "score": -3.571793027755712,
+            "total_pnl": -41.757788116983384,
+            "win_rate": 52.21818181818182
+        },
+        {
+            "number": 56,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07275593892503955,
+                "TP_RATIO": 0.8783641233909063,
+                "HOLDING_TIME": 441,
+                "STOP_LOSS_PCT": 0.0018391573348196032,
+                "MAKER_BUY_OFFSET_PCT": 8.533299035245528e-05,
+                "MAKER_ORDER_TIMEOUT": 107
+            },
+            "score": -3.2512431348383206,
+            "total_pnl": -37.38431384979074,
+            "win_rate": 51.00074128984433
+        },
+        {
+            "number": 57,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07170358488826493,
+                "TP_RATIO": 0.8822209263639952,
+                "HOLDING_TIME": 447,
+                "STOP_LOSS_PCT": 0.0018176920484492191,
+                "MAKER_BUY_OFFSET_PCT": 8.572070841634615e-05,
+                "MAKER_ORDER_TIMEOUT": 102
+            },
+            "score": -3.4810436834428278,
+            "total_pnl": -41.15411148037901,
+            "win_rate": 50.937734433608405
+        },
+        {
+            "number": 58,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07696994643393039,
+                "TP_RATIO": 0.8844726941054221,
+                "HOLDING_TIME": 432,
+                "STOP_LOSS_PCT": 0.0016549780663855315,
+                "MAKER_BUY_OFFSET_PCT": 9.461379117344171e-05,
+                "MAKER_ORDER_TIMEOUT": 108
+            },
+            "score": -3.3831918136491446,
+            "total_pnl": -39.90603214779681,
+            "win_rate": 49.52589350838804
+        },
+        {
+            "number": 59,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07436930636604817,
+                "TP_RATIO": 0.8805243099799316,
+                "HOLDING_TIME": 471,
+                "STOP_LOSS_PCT": 0.0017124898894745335,
+                "MAKER_BUY_OFFSET_PCT": 8.567552057685052e-05,
+                "MAKER_ORDER_TIMEOUT": 93
+            },
+            "score": -2.9985685980670707,
+            "total_pnl": -35.447160905622,
+            "win_rate": 50.55514433752776
+        },
+        {
+            "number": 60,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07442014445485462,
+                "TP_RATIO": 0.8503290007841321,
+                "HOLDING_TIME": 459,
+                "STOP_LOSS_PCT": 0.0010283043542645078,
+                "MAKER_BUY_OFFSET_PCT": 8.644681403260346e-05,
+                "MAKER_ORDER_TIMEOUT": 94
+            },
+            "score": -4.310668610389001,
+            "total_pnl": -50.78501503993572,
+            "win_rate": 43.529411764705884
+        },
+        {
+            "number": 61,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07771890081037311,
+                "TP_RATIO": 0.8753517560871955,
+                "HOLDING_TIME": 498,
+                "STOP_LOSS_PCT": 0.0015796816059741126,
+                "MAKER_BUY_OFFSET_PCT": 8.247526696223326e-05,
+                "MAKER_ORDER_TIMEOUT": 92
+            },
+            "score": -3.827750809173968,
+            "total_pnl": -45.21892091922585,
+            "win_rate": 49.29577464788733
+        },
+        {
+            "number": 62,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07362576891255057,
+                "TP_RATIO": 0.8309843852662766,
+                "HOLDING_TIME": 476,
+                "STOP_LOSS_PCT": 0.0017172728927986906,
+                "MAKER_BUY_OFFSET_PCT": 8.996231438445688e-05,
+                "MAKER_ORDER_TIMEOUT": 97
+            },
+            "score": -3.2388186022725836,
+            "total_pnl": -37.957077651288074,
+            "win_rate": 51.77777777777778
+        },
+        {
+            "number": 63,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07973662749649835,
+                "TP_RATIO": 0.8357071816057057,
+                "HOLDING_TIME": 468,
+                "STOP_LOSS_PCT": 0.0016906538000953885,
+                "MAKER_BUY_OFFSET_PCT": 9.963366363108257e-05,
+                "MAKER_ORDER_TIMEOUT": 82
+            },
+            "score": -2.886389392350417,
+            "total_pnl": -34.48172879811854,
+            "win_rate": 51.962209302325576
+        },
+        {
+            "number": 64,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.05207792065252757,
+                "TP_RATIO": 0.8980093515493377,
+                "HOLDING_TIME": 468,
+                "STOP_LOSS_PCT": 0.0017075801662050408,
+                "MAKER_BUY_OFFSET_PCT": 9.934829940065012e-05,
+                "MAKER_ORDER_TIMEOUT": 82
+            },
+            "score": -3.68800954516466,
+            "total_pnl": -40.37100360910682,
+            "win_rate": 49.51816160118606
+        },
+        {
+            "number": 65,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06749771927957099,
+                "TP_RATIO": 0.856467079124034,
+                "HOLDING_TIME": 396,
+                "STOP_LOSS_PCT": 0.0016258887617385234,
+                "MAKER_BUY_OFFSET_PCT": 8.8905404672595e-05,
+                "MAKER_ORDER_TIMEOUT": 80
+            },
+            "score": -3.599755848252082,
+            "total_pnl": -44.21138911215362,
+            "win_rate": 49.37458854509546
+        },
+        {
+            "number": 66,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07497450094697618,
+                "TP_RATIO": 0.8060350061831889,
+                "HOLDING_TIME": 533,
+                "STOP_LOSS_PCT": 0.0015369235880232247,
+                "MAKER_BUY_OFFSET_PCT": 9.494379925923211e-05,
+                "MAKER_ORDER_TIMEOUT": 73
+            },
+            "score": -3.4980280762195304,
+            "total_pnl": -41.39965030336667,
+            "win_rate": 51.26582278481012
+        },
+        {
+            "number": 67,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07053759053577585,
+                "TP_RATIO": 0.8810965332261379,
+                "HOLDING_TIME": 519,
+                "STOP_LOSS_PCT": 0.001818171663631494,
+                "MAKER_BUY_OFFSET_PCT": 9.129294362588305e-05,
+                "MAKER_ORDER_TIMEOUT": 86
+            },
+            "score": -3.181424173000769,
+            "total_pnl": -36.873187731317614,
+            "win_rate": 51.729559748427675
+        },
+        {
+            "number": 68,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07066991123570512,
+                "TP_RATIO": 0.8327667628038818,
+                "HOLDING_TIME": 520,
+                "STOP_LOSS_PCT": 0.0016948395526367622,
+                "MAKER_BUY_OFFSET_PCT": 9.136769371871522e-05,
+                "MAKER_ORDER_TIMEOUT": 86
+            },
+            "score": -2.684104614596475,
+            "total_pnl": -31.95554852277031,
+            "win_rate": 52.91943828529194
+        },
+        {
+            "number": 69,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07054745683108023,
+                "TP_RATIO": 0.8529315809898277,
+                "HOLDING_TIME": 521,
+                "STOP_LOSS_PCT": 0.0016792692797881058,
+                "MAKER_BUY_OFFSET_PCT": 9.995856504541165e-05,
+                "MAKER_ORDER_TIMEOUT": 72
+            },
+            "score": -3.037604173013432,
+            "total_pnl": -35.59058479907204,
+            "win_rate": 52.4517087667162
+        },
+        {
+            "number": 70,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06132060168201035,
+                "TP_RATIO": 0.7750295961868281,
+                "HOLDING_TIME": 576,
+                "STOP_LOSS_PCT": 0.00168825431444858,
+                "MAKER_BUY_OFFSET_PCT": 9.938154542442567e-05,
+                "MAKER_ORDER_TIMEOUT": 70
+            },
+            "score": -3.4476365168045544,
+            "total_pnl": -39.130514003279146,
+            "win_rate": 52.779836916234245
+        },
+        {
+            "number": 71,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07031681228913214,
+                "TP_RATIO": 0.8498831299627931,
+                "HOLDING_TIME": 525,
+                "STOP_LOSS_PCT": 0.0015896212821973,
+                "MAKER_BUY_OFFSET_PCT": 9.217990027715157e-05,
+                "MAKER_ORDER_TIMEOUT": 78
+            },
+            "score": -3.720655764187553,
+            "total_pnl": -44.36943990824243,
+            "win_rate": 50.77720207253886
+        },
+        {
+            "number": 72,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06435589985703907,
+                "TP_RATIO": 0.8723588441911332,
+                "HOLDING_TIME": 519,
+                "STOP_LOSS_PCT": 0.0014534031083718961,
+                "MAKER_BUY_OFFSET_PCT": 9.603063422426181e-05,
+                "MAKER_ORDER_TIMEOUT": 67
+            },
+            "score": -3.8150628448503,
+            "total_pnl": -42.84509882965538,
+            "win_rate": 48.75690607734807
+        },
+        {
+            "number": 73,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.057691307401993394,
+                "TP_RATIO": 0.886896585006089,
+                "HOLDING_TIME": 562,
+                "STOP_LOSS_PCT": 0.001657028378568843,
+                "MAKER_BUY_OFFSET_PCT": 9.989669734475458e-05,
+                "MAKER_ORDER_TIMEOUT": 86
+            },
+            "score": -3.4571695611830164,
+            "total_pnl": -37.9418919405934,
+            "win_rate": 51.36186770428015
+        },
+        {
+            "number": 74,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07616181841389853,
+                "TP_RATIO": 0.8375264101992598,
+                "HOLDING_TIME": 487,
+                "STOP_LOSS_PCT": 0.001544520579189783,
+                "MAKER_BUY_OFFSET_PCT": 9.226485533246086e-05,
+                "MAKER_ORDER_TIMEOUT": 63
+            },
+            "score": -3.4997417010428595,
+            "total_pnl": -42.07216737085003,
+            "win_rate": 49.965205288796106
+        },
+        {
+            "number": 75,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07841860667705894,
+                "TP_RATIO": 0.8565697677242946,
+                "HOLDING_TIME": 509,
+                "STOP_LOSS_PCT": 0.0019837528276131187,
+                "MAKER_BUY_OFFSET_PCT": 8.78489552099911e-05,
+                "MAKER_ORDER_TIMEOUT": 84
+            },
+            "score": -3.2715718304283694,
+            "total_pnl": -38.3881566327169,
+            "win_rate": 53.001579778830965
+        },
+        {
+            "number": 76,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06831211570852752,
+                "TP_RATIO": 0.8071152919548372,
+                "HOLDING_TIME": 462,
+                "STOP_LOSS_PCT": 0.0017830861688423669,
+                "MAKER_BUY_OFFSET_PCT": 9.72265130420551e-05,
+                "MAKER_ORDER_TIMEOUT": 71
+            },
+            "score": -3.480617019778347,
+            "total_pnl": -41.007124314266655,
+            "win_rate": 51.39186295503212
+        },
+        {
+            "number": 77,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07083516678097752,
+                "TP_RATIO": 0.7962625928104631,
+                "HOLDING_TIME": 545,
+                "STOP_LOSS_PCT": 0.0018817950530000895,
+                "MAKER_BUY_OFFSET_PCT": 9.044467467519014e-05,
+                "MAKER_ORDER_TIMEOUT": 74
+            },
+            "score": -3.3676106330348654,
+            "total_pnl": -40.36959860939707,
+            "win_rate": 54.112221368178325
+        },
+        {
+            "number": 78,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07636914800434212,
+                "TP_RATIO": 0.8571854943567091,
+                "HOLDING_TIME": 487,
+                "STOP_LOSS_PCT": 0.0018339767525821058,
+                "MAKER_BUY_OFFSET_PCT": 9.445220979617986e-05,
+                "MAKER_ORDER_TIMEOUT": 77
+            },
+            "score": -3.1742250051526253,
+            "total_pnl": -38.22166313966872,
+            "win_rate": 52.04545454545455
+        },
+        {
+            "number": 79,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07551478058532762,
+                "TP_RATIO": 0.8578766685533517,
+                "HOLDING_TIME": 453,
+                "STOP_LOSS_PCT": 0.0013289892120887227,
+                "MAKER_BUY_OFFSET_PCT": 9.498580312156408e-05,
+                "MAKER_ORDER_TIMEOUT": 56
+            },
+            "score": -4.074810907681958,
+            "total_pnl": -49.79963842656214,
+            "win_rate": 46.86323713927227
+        },
+        {
+            "number": 80,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07740865826102243,
+                "TP_RATIO": 0.834549251164476,
+                "HOLDING_TIME": 497,
+                "STOP_LOSS_PCT": 0.0017633821382103962,
+                "MAKER_BUY_OFFSET_PCT": 8.329413718179608e-05,
+                "MAKER_ORDER_TIMEOUT": 77
+            },
+            "score": -3.1683337252249086,
+            "total_pnl": -38.503041689197,
+            "win_rate": 52.76532137518684
+        },
+        {
+            "number": 81,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07762011206654477,
+                "TP_RATIO": 0.834535319511245,
+                "HOLDING_TIME": 496,
+                "STOP_LOSS_PCT": 0.0016802797061347536,
+                "MAKER_BUY_OFFSET_PCT": 8.386953315846306e-05,
+                "MAKER_ORDER_TIMEOUT": 78
+            },
+            "score": -3.1820841811797096,
+            "total_pnl": -38.87349058265304,
+            "win_rate": 51.45197319434103
+        },
+        {
+            "number": 82,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07336690441527051,
+                "TP_RATIO": 0.8151756105392924,
+                "HOLDING_TIME": 471,
+                "STOP_LOSS_PCT": 0.0017599622609573,
+                "MAKER_BUY_OFFSET_PCT": 8.791157192569118e-05,
+                "MAKER_ORDER_TIMEOUT": 76
+            },
+            "score": -3.406624358873354,
+            "total_pnl": -39.51092744781785,
+            "win_rate": 52.060737527114966
+        },
+        {
+            "number": 83,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07960725163526008,
+                "TP_RATIO": 0.7961420016632191,
+                "HOLDING_TIME": 534,
+                "STOP_LOSS_PCT": 0.0016157438753632302,
+                "MAKER_BUY_OFFSET_PCT": 8.020698067809201e-05,
+                "MAKER_ORDER_TIMEOUT": 62
+            },
+            "score": -3.682003297640729,
+            "total_pnl": -42.29085926776127,
+            "win_rate": 51.088534107402026
+        },
+        {
+            "number": 84,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07697955945903176,
+                "TP_RATIO": 0.8425745437448966,
+                "HOLDING_TIME": 492,
+                "STOP_LOSS_PCT": 0.0017433395564115865,
+                "MAKER_BUY_OFFSET_PCT": 9.714337844849706e-05,
+                "MAKER_ORDER_TIMEOUT": 81
+            },
+            "score": -3.341715076446252,
+            "total_pnl": -40.553119415007636,
+            "win_rate": 51.12443778110944
+        },
+        {
+            "number": 85,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07511175488277794,
+                "TP_RATIO": 0.8660736530827442,
+                "HOLDING_TIME": 509,
+                "STOP_LOSS_PCT": 0.001834251574734271,
+                "MAKER_BUY_OFFSET_PCT": 9.389594241646223e-05,
+                "MAKER_ORDER_TIMEOUT": 83
+            },
+            "score": -3.499285972101983,
+            "total_pnl": -40.34083799275285,
+            "win_rate": 50.91779728651237
+        },
+        {
+            "number": 86,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07323219678559645,
+                "TP_RATIO": 0.8308414344113954,
+                "HOLDING_TIME": 477,
+                "STOP_LOSS_PCT": 0.0008001425344307758,
+                "MAKER_BUY_OFFSET_PCT": 7.987991311333501e-05,
+                "MAKER_ORDER_TIMEOUT": 88
+            },
+            "score": -4.937028707967429,
+            "total_pnl": -58.22189324738625,
+            "win_rate": 39.58333333333333
+        },
+        {
+            "number": 87,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.0799504570907584,
+                "TP_RATIO": 0.8921301775623844,
+                "HOLDING_TIME": 502,
+                "STOP_LOSS_PCT": 0.000510347000422458,
+                "MAKER_BUY_OFFSET_PCT": 8.330782192345065e-05,
+                "MAKER_ORDER_TIMEOUT": 72
+            },
+            "score": -4.962095000372516,
+            "total_pnl": -59.49300543002937,
+            "win_rate": 29.566854990583803
+        },
+        {
+            "number": 88,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07170448597710326,
+                "TP_RATIO": 0.8503633418957125,
+                "HOLDING_TIME": 555,
+                "STOP_LOSS_PCT": 0.0019524657438654502,
+                "MAKER_BUY_OFFSET_PCT": 8.710915926305359e-05,
+                "MAKER_ORDER_TIMEOUT": 92
+            },
+            "score": -3.0163716266165177,
+            "total_pnl": -36.819543941245676,
+            "win_rate": 53.64238410596026
+        },
+        {
+            "number": 89,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06633041791659533,
+                "TP_RATIO": 0.8133463750494735,
+                "HOLDING_TIME": 563,
+                "STOP_LOSS_PCT": 0.001973442697078265,
+                "MAKER_BUY_OFFSET_PCT": 8.714485756362113e-05,
+                "MAKER_ORDER_TIMEOUT": 91
+            },
+            "score": -3.5101958725681226,
+            "total_pnl": -41.03208587526214,
+            "win_rate": 54.611066559743385
+        },
+        {
+            "number": 90,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07192709908989922,
+                "TP_RATIO": 0.8490539521296661,
+                "HOLDING_TIME": 586,
+                "STOP_LOSS_PCT": 0.0019027957807117419,
+                "MAKER_BUY_OFFSET_PCT": 9.044646972903419e-05,
+                "MAKER_ORDER_TIMEOUT": 84
+            },
+            "score": -3.2534091912007157,
+            "total_pnl": -37.238336462238095,
+            "win_rate": 52.883031301482696
+        },
+        {
+            "number": 91,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07660720393616959,
+                "TP_RATIO": 0.5690008745716554,
+                "HOLDING_TIME": 530,
+                "STOP_LOSS_PCT": 0.0018745183388366182,
+                "MAKER_BUY_OFFSET_PCT": 9.317425241664913e-05,
+                "MAKER_ORDER_TIMEOUT": 78
+            },
+            "score": -4.008324084162949,
+            "total_pnl": -43.4728511595686,
+            "win_rate": 60.012919896640824
+        },
+        {
+            "number": 92,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07805415524409641,
+                "TP_RATIO": 0.8569331438690373,
+                "HOLDING_TIME": 483,
+                "STOP_LOSS_PCT": 0.0017776705408905098,
+                "MAKER_BUY_OFFSET_PCT": 9.682225529716405e-05,
+                "MAKER_ORDER_TIMEOUT": 87
+            },
+            "score": -3.458538719646079,
+            "total_pnl": -40.56188590019439,
+            "win_rate": 51.050583657587545
+        },
+        {
+            "number": 93,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07455352768236302,
+                "TP_RATIO": 0.8718518111218664,
+                "HOLDING_TIME": 550,
+                "STOP_LOSS_PCT": 0.0016937968154145903,
+                "MAKER_BUY_OFFSET_PCT": 7.813128090538851e-05,
+                "MAKER_ORDER_TIMEOUT": 75
+            },
+            "score": -3.45236009350179,
+            "total_pnl": -41.61488291433558,
+            "win_rate": 50.8235294117647
+        },
+        {
+            "number": 94,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.06918470164360159,
+                "TP_RATIO": 0.8398155002520706,
+                "HOLDING_TIME": 460,
+                "STOP_LOSS_PCT": 0.0019446921255246465,
+                "MAKER_BUY_OFFSET_PCT": 9.519929532806102e-05,
+                "MAKER_ORDER_TIMEOUT": 95
+            },
+            "score": -3.4197146010862163,
+            "total_pnl": -40.46324100971129,
+            "win_rate": 51.85185185185185
+        },
+        {
+            "number": 95,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.0760359280176115,
+                "TP_RATIO": 0.8258334385602075,
+                "HOLDING_TIME": 424,
+                "STOP_LOSS_PCT": 0.0018372213568002703,
+                "MAKER_BUY_OFFSET_PCT": 8.467778129772753e-05,
+                "MAKER_ORDER_TIMEOUT": 93
+            },
+            "score": -3.815854131495446,
+            "total_pnl": -44.619738550584245,
+            "win_rate": 51.19305856832972
+        },
+        {
+            "number": 96,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07182189826404985,
+                "TP_RATIO": 0.7593569362555807,
+                "HOLDING_TIME": 518,
+                "STOP_LOSS_PCT": 0.0017294025926887413,
+                "MAKER_BUY_OFFSET_PCT": 8.905735678772936e-05,
+                "MAKER_ORDER_TIMEOUT": 69
+            },
+            "score": -3.5281411116889774,
+            "total_pnl": -42.45807220392866,
+            "win_rate": 53.12724658519051
+        },
+        {
+            "number": 97,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07866526782248594,
+                "TP_RATIO": 0.6792074058504338,
+                "HOLDING_TIME": 436,
+                "STOP_LOSS_PCT": 0.0018103680218392148,
+                "MAKER_BUY_OFFSET_PCT": 2.7720397131819768e-05,
+                "MAKER_ORDER_TIMEOUT": 81
+            },
+            "score": -3.4668887761733296,
+            "total_pnl": -43.637448698497,
+            "win_rate": 55.05896958410925
+        },
+        {
+            "number": 98,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07392194220386834,
+                "TP_RATIO": 0.8510746075265588,
+                "HOLDING_TIME": 447,
+                "STOP_LOSS_PCT": 0.001859707223008505,
+                "MAKER_BUY_OFFSET_PCT": 9.826949150606694e-05,
+                "MAKER_ORDER_TIMEOUT": 89
+            },
+            "score": -3.697863507130258,
+            "total_pnl": -42.296914578340385,
+            "win_rate": 50.82458770614693
+        },
+        {
+            "number": 99,
+            "params": {
+                "PREDICTION_THRESHOLD": 0.07561214742434925,
+                "TP_RATIO": 0.7192418535284004,
+                "HOLDING_TIME": 488,
+                "STOP_LOSS_PCT": 0.0019123070072477057,
+                "MAKER_BUY_OFFSET_PCT": 9.21536483080664e-05,
+                "MAKER_ORDER_TIMEOUT": 84
+            },
+            "score": -3.9927446429255706,
+            "total_pnl": -45.2805007943593,
+            "win_rate": 55.1094890510949
+        }
+    ]
+}

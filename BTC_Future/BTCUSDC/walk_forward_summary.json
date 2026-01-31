@@ -1,0 +1,24 @@
+{
+  "num_windows": 5,
+  "features_used": 73,
+  "parameters": {
+    "confidence_threshold": 0.75,
+    "maker_offset_pct": 0.0003,
+    "maker_timeout": 20,
+    "take_profit_pct": 0.0018,
+    "stop_loss_pct": 0.001,
+    "hold_time": 90
+  },
+  "statistics": {
+    "mean_win_rate": 0.39919855835348794,
+    "std_win_rate": 0.17772309626351684,
+    "mean_return_pct": -0.22352028204879618,
+    "std_return_pct": 0.5220683154565805,
+    "mean_sharpe": -3.4753979677202134,
+    "std_sharpe": 8.035924152985658,
+    "profitable_windows": 2,
+    "stability_score": 2.3356641762943418
+  },
+  "best_window": 1,
+  "worst_window": 2
+}

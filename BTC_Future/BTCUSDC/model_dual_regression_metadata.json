@@ -1,0 +1,208 @@
+{
+  "model_type": "dual_regression",
+  "prediction_window": 300,
+  "features": [
+    "net_flow",
+    "buy_sell_ratio",
+    "order_flow_imbalance",
+    "aggressive_buy_ratio",
+    "net_flow_ma5",
+    "net_flow_ma10",
+    "net_flow_ma30",
+    "net_flow_std5",
+    "net_flow_acceleration",
+    "cvd_60",
+    "cvd_300",
+    "total_volume",
+    "volume_ma5",
+    "volume_ma15",
+    "volume_ma30",
+    "volume_std5",
+    "volume_surge",
+    "relative_volume",
+    "buy_volume_pct",
+    "sell_volume_pct",
+    "hl_range",
+    "oc_diff",
+    "body_to_range_ratio",
+    "upper_wick",
+    "lower_wick",
+    "price_velocity",
+    "price_acceleration",
+    "price_change_pct_1",
+    "price_change_pct_5",
+    "price_change_pct_15",
+    "momentum_5",
+    "momentum_15",
+    "dist_from_ma5",
+    "dist_from_ma15",
+    "dist_from_ma30",
+    "ma5_slope",
+    "trade_count",
+    "avg_trade_size",
+    "trade_frequency",
+    "tick_momentum",
+    "rsi_5",
+    "rsi_14",
+    "bb_position",
+    "atr_5",
+    "volatility_regime",
+    "trend_strength"
+  ],
+  "num_features": 46,
+  "training_samples": 202736,
+  "test_samples": 50684,
+  "buy_model": {
+    "mae": 0.07006101934445678,
+    "rmse": 0.1103517880944227,
+    "r2": 0.6026485698540553,
+    "feature_importance": [
+      {
+        "feature": "cvd_300",
+        "importance": 1453
+      },
+      {
+        "feature": "volume_ma30",
+        "importance": 1122
+      },
+      {
+        "feature": "dist_from_ma30",
+        "importance": 967
+      },
+      {
+        "feature": "volatility_regime",
+        "importance": 837
+      },
+      {
+        "feature": "cvd_60",
+        "importance": 796
+      },
+      {
+        "feature": "trend_strength",
+        "importance": 752
+      },
+      {
+        "feature": "atr_5",
+        "importance": 607
+      },
+      {
+        "feature": "net_flow_ma30",
+        "importance": 547
+      },
+      {
+        "feature": "net_flow_ma10",
+        "importance": 287
+      },
+      {
+        "feature": "rsi_14",
+        "importance": 286
+      },
+      {
+        "feature": "volume_ma15",
+        "importance": 210
+      },
+      {
+        "feature": "bb_position",
+        "importance": 146
+      },
+      {
+        "feature": "volume_ma5",
+        "importance": 117
+      },
+      {
+        "feature": "net_flow_std5",
+        "importance": 112
+      },
+      {
+        "feature": "volume_std5",
+        "importance": 98
+      }
+    ]
+  },
+  "sell_model": {
+    "mae": 0.07707946125817015,
+    "rmse": 0.12356619060234474,
+    "r2": 0.3078454281235039,
+    "feature_importance": [
+      {
+        "feature": "cvd_300",
+        "importance": 1472
+      },
+      {
+        "feature": "volume_ma30",
+        "importance": 985
+      },
+      {
+        "feature": "dist_from_ma30",
+        "importance": 889
+      },
+      {
+        "feature": "volatility_regime",
+        "importance": 882
+      },
+      {
+        "feature": "cvd_60",
+        "importance": 798
+      },
+      {
+        "feature": "trend_strength",
+        "importance": 797
+      },
+      {
+        "feature": "atr_5",
+        "importance": 763
+      },
+      {
+        "feature": "net_flow_ma30",
+        "importance": 449
+      },
+      {
+        "feature": "rsi_14",
+        "importance": 267
+      },
+      {
+        "feature": "net_flow_ma10",
+        "importance": 236
+      },
+      {
+        "feature": "bb_position",
+        "importance": 197
+      },
+      {
+        "feature": "volume_std5",
+        "importance": 177
+      },
+      {
+        "feature": "net_flow_std5",
+        "importance": 168
+      },
+      {
+        "feature": "volume_ma15",
+        "importance": 156
+      },
+      {
+        "feature": "relative_volume",
+        "importance": 88
+      }
+    ]
+  },
+  "target_statistics": {
+    "upside": {
+      "mean": 0.12972981272138476,
+      "median": 0.09735398580646026,
+      "std": 0.1307062929009024
+    },
+    "downside": {
+      "mean": 0.12617303380625913,
+      "median": 0.09532725195980477,
+      "std": 0.1187293250923225
+    }
+  },
+  "hyperparameters": {
+    "n_estimators": 300,
+    "learning_rate": 0.02,
+    "num_leaves": 31,
+    "max_depth": 6,
+    "min_child_samples": 100
+  }
+}

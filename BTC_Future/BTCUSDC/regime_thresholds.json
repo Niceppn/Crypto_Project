@@ -1,0 +1,12 @@
+{
+  "atr_threshold": 7.69999999999709,
+  "spread_volatility_threshold": 0.008103409173421817,
+  "flow_std_threshold": 0.8275319933387946,
+  "volume_surge_threshold": 1.1317829448590737,
+  "conditions_required": 3,
+  "analysis": {
+    "window4_favorable_pct": 70.63570357509273,
+    "window5_favorable_pct": 62.77005031074282,
+    "expected_reduction": "Window 4: 35801 / 50684 samples"
+  }
+}

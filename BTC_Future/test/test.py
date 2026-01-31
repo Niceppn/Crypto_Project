@@ -10,7 +10,7 @@ from binance.enums import *
 # ==========================================
 SYMBOL_WS = "btcusdc"       # ชื่อสำหรับ Websocket (ตัวเล็ก)
 SYMBOL_TRADE = "BTCUSDC"    # ชื่อสำหรับส่งคำสั่ง (ตัวใหญ่)
-MODEL_FILE = "BTCUSDC.txt"
+MODEL_FILE = "/Users/Macbook/Collect_Crypto/BTC_Future/test/btcusdc_training_data.txt"
 
 # --- TELEGRAM ---
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
@@ -24,11 +24,15 @@ SECRET_KEY = "ePHw4rwFMTrkwwmdruClXQzOSX9WRvMVFulDDWeAjkZvrHAGkEAIkr3h1HeCsqyv"
 CONFIDENCE_THRESHOLD = 0.40  # ความมั่นใจ AI (สามารถปรับได้)
 CAPITAL_PER_TRADE = 200      # ทุนต่อไม้ (สามารถปรับได้)
 HOLDING_TIME = 2000           # วินาที (สามารถปรับได้)
-PROFIT_TARGET_PCT = 0.0002   # % (สามารถปรับได้)
-STOP_LOSS_PCT = 0.001        # % (สามารถปรับได้)
+PROFIT_TARGET_PCT = 0.00015   # % (สามารถปรับได้)
+STOP_LOSS_PCT = 0.009        # % (สามารถปรับได้)
 MAKER_BUY_OFFSET_PCT = 0.00001
 MAKER_ORDER_TIMEOUT = 60     # Timeout ของ Limit Order (สามารถปรับได้)
-STATUS_REPORT_INTERVAL = 1800  # 30 นาที
+STATUS_REPORT_INTERVAL = 3800  # 30 นาที
+
+# --- Concurrent Positions ---
+MAX_POSITIONS = 2            # เปิดได้สูงสุด 2 ไม้พร้อมกัน
+COOLDOWN_SECONDS = 30        # cooldown ระหว่างไม้ (วินาที)
 
 # ==========================================
 # 2. CONNECT TO BINANCE
@@ -55,7 +59,7 @@ total_pnl_cash = 0.0
 active_orders = []
 pending_orders = []
 timeout_history = []  # เก็บประวัติ order ที่ timeout
-last_trade_time = 0
+last_trade_time_per_slot = [0] * MAX_POSITIONS  # cooldown แต่ละ slot
 last_status_report_time = time.time()
 last_update_id = 0
 buffer = deque(maxlen=60)
@@ -164,6 +168,8 @@ def handle_telegram_commands():
                 f"━━━━━━━━━━━━━━━━\n"
                 f"📋 Active Orders: {len(active_orders)}\n"
                 f"⏱️ Pending Orders: {len(pending_orders)}\n"
+                f"🔄 Slot 1: {'✓ พร้อม' if len(active_orders) + len(pending_orders) == 0 else 'ใช้งาน'}\n"
+                f"🔄 Slot 2: {'✓ พร้อม' if (len(active_orders) == 1 and (int(time.time()) - active_orders[0].get('entry_ts', int(time.time()))) >= COOLDOWN_SECONDS) else 'รอ cooldown' if len(active_orders) == 1 else 'รอไม้ 1'}\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"⚙️ <b>SETTINGS:</b>\n"
                 f"🤖 AI Confidence: {CONFIDENCE_THRESHOLD*100:.0f}%\n"
@@ -518,7 +524,7 @@ def check_pending_orders(current_price, current_ts):
     
     for order in pending_orders[:]:
         if current_price <= order['limit_price']:
-            print(f"\n✅ [FILLED] Maker Buy @ {order['limit_price']:.2f} | TP: {order['take_profit']:.2f} | SL: {order['stop_loss']:.2f}")
+            print(f"\n✅ [FILLED] Slot {order['slot']} | Maker Buy @ {order['limit_price']:.2f} | TP: {order['take_profit']:.2f} | SL: {order['stop_loss']:.2f}")
             
             sell_order = place_limit_sell(SYMBOL_TRADE, order['quantity'], order['take_profit'])
             
@@ -532,9 +538,11 @@ def check_pending_orders(current_price, current_ts):
                     'take_profit': order['take_profit'],
                     'stop_loss': order['stop_loss'],
                     'exit_ts': current_ts + HOLDING_TIME,
+                    'entry_ts': current_ts,  # เวลาที่ order เข้าจริง (filled)
                     'buy_order_id': order.get('order_id'),
                     'sell_order_id': sell_order_id,
-                    'confidence': order.get('confidence', 0)  # เก็บความมั่นใจ
+                    'confidence': order.get('confidence', 0),
+                    'slot': order.get('slot', 0)  # ส่งต่อ slot จาก pending order
                 })
             else:
                 active_orders.append({
@@ -543,16 +551,18 @@ def check_pending_orders(current_price, current_ts):
                     'take_profit': order['take_profit'],
                     'stop_loss': order['stop_loss'],
                     'exit_ts': current_ts + HOLDING_TIME,
+                    'entry_ts': current_ts,  # เวลาที่ order เข้าจริง (filled)
                     'buy_order_id': order.get('order_id'),
                     'sell_order_id': None,
-                    'confidence': order.get('confidence', 0)
+                    'confidence': order.get('confidence', 0),
+                    'slot': order.get('slot', 0)  # ส่งต่อ slot จาก pending order
                 })
             
             pending_orders.remove(order)
         
         elif current_ts >= order['timeout_ts']:
             stats['unfilled'] += 1
-            print(f"\n⏳ [UNFILLED] Limit Buy @ {order['limit_price']:.2f} (AI: {order.get('confidence', 0)*100:.2f}%) cancelled (timeout)")
+            print(f"\n⏳ [UNFILLED] Slot {order['slot']} | Limit Buy @ {order['limit_price']:.2f} (AI: {order.get('confidence', 0)*100:.2f}%) cancelled (timeout)")
             
             # เก็บประวัติ timeout
             timeout_history.append({
@@ -607,15 +617,39 @@ def check_orders(current_price, current_ts):
                 else: stats['breakeven'] += 1
                 
                 confidence = order.get('confidence', 0)
-                print(f"✅ SOLD: {current_price:.2f} | PNL: {profit:.4f} USDT | Total: {total_pnl_cash:.4f} | AI: {confidence*100:.2f}% | {reason}")
+                print(f"✅ SOLD [Slot {order['slot']}]: {current_price:.2f} | PNL: {profit:.4f} USDT | Total: {total_pnl_cash:.4f} | AI: {confidence*100:.2f}% | {reason}")
                 
                 active_orders.remove(order)
 
+def get_available_slot(current_ts):
+    """หา slot ที่ว่างและผ่าน cooldown แล้ว — คืน index หรือ None"""
+    total_open = len(active_orders) + len(pending_orders)
+    if total_open >= MAX_POSITIONS:
+        return None  # เปิดครบ MAX_POSITIONS แล้ว
+    
+    # ถ้ายังไม่มี order ใดๆ เลย ให้เปิด slot แรกได้เลย
+    if total_open == 0:
+        return 0  # slot แรกพร้อมเสมอ
+    
+    # ถ้ามี order อยู่แล้ว 1 order ให้ตรวจสอบว่าเป็น active order หรือไม่
+    if total_open == 1 and len(active_orders) == 1:
+        # ใช้เวลาจาก active order แรก (เริ่มนับ cooldown หลังจาก filled)
+        first_active_order = active_orders[0]
+        entry_time = first_active_order.get('entry_ts', current_ts)
+        
+        if entry_time and (current_ts - entry_time) >= COOLDOWN_SECONDS:
+            return 1  # slot ที่สองพร้อมหลังจากผ่าน cooldown และต้องมีสัญญาณใหม่
+    
+    return None  # ไม่มี slot ที่พร้อม
+
 def predict(data_list, last_price, current_ts):
-    global last_trade_time, active_orders, pending_orders
+    global last_trade_time_per_slot, active_orders, pending_orders
     
     if not IS_RUNNING: return
-    if len(active_orders) > 0 or len(pending_orders) > 0 or (current_ts - last_trade_time < 30): return
+
+    # หา slot ที่พร้อม
+    available_slot = get_available_slot(current_ts)
+    if available_slot is None: return  # ไม่มี slot ว่างหรือ cooldown ยังไม่ผ่าน
 
     df = pd.DataFrame(data_list)
     if len(df) < 15: return
@@ -635,7 +669,22 @@ def predict(data_list, last_price, current_ts):
     feat['rsi'] = 100 - (100 / (1 + (gain / (loss + 1e-10)))).iloc[-1]
 
     prob = model.predict(pd.DataFrame([feat]))[0]
-    print(f"\rPrice: {last_price:.2f} | Prob: {prob*100:.2f}%", end="")
+    
+    # แสดง slot status เล็กๆ
+    slot_status = ""
+    for i in range(MAX_POSITIONS):
+        if i == 0:
+            # Slot 1: แสดง cooldown จาก pending order time
+            remaining = max(0, COOLDOWN_SECONDS - (current_ts - last_trade_time_per_slot[i]))
+        elif i == 1 and len(active_orders) > 0:
+            # Slot 2: แสดง cooldown จาก entry_ts ของ active order แรก
+            entry_time = active_orders[0].get('entry_ts', current_ts)
+            remaining = max(0, COOLDOWN_SECONDS - (current_ts - entry_time))
+        else:
+            remaining = 0
+        
+        slot_status += f" S{i+1}:{'CD'+str(int(remaining))+'s' if remaining > 0 else '✓'}"
+    print(f"\rPrice: {last_price:.2f} | Prob: {prob*100:.2f}% |{slot_status}", end="")
 
     if prob >= CONFIDENCE_THRESHOLD:
         try:
@@ -645,13 +694,13 @@ def predict(data_list, last_price, current_ts):
             tp = limit_buy_price * (1 + PROFIT_TARGET_PCT)
             sl = limit_buy_price * (1 - STOP_LOSS_PCT)
             
-            print(f"\n⚡ [LIMIT BUY] @ {limit_buy_price:.2f} (Current: {last_price:.2f}) | AI: {prob*100:.2f}% | TP: {tp:.2f} | SL: {sl:.2f}")
+            print(f"\n⚡ [LIMIT BUY] Slot {available_slot} @ {limit_buy_price:.2f} (Current: {last_price:.2f}) | AI: {prob*100:.2f}% | TP: {tp:.2f} | SL: {sl:.2f}")
             
             order_response = place_limit_buy(SYMBOL_TRADE, qty, limit_buy_price)
             
             if order_response:
                 order_id = order_response.get('orderId')
-                print(f"✅ Limit Order Placed | OrderID: {order_id}")
+                print(f"✅ Limit Order Placed | Slot {available_slot} | OrderID: {order_id}")
                 
                 pending_orders.append({
                     'limit_price': limit_buy_price,
@@ -660,9 +709,12 @@ def predict(data_list, last_price, current_ts):
                     'stop_loss': sl,
                     'timeout_ts': current_ts + MAKER_ORDER_TIMEOUT,
                     'order_id': order_id,
-                    'confidence': prob  # เก็บความมั่นใจของ AI
+                    'confidence': prob,
+                    'slot': available_slot  # บันทึก slot ของ order นี้
                 })
-                last_trade_time = current_ts
+                
+                # อัพเดท cooldown ของ slot นี้
+                last_trade_time_per_slot[available_slot] = current_ts
 
         except Exception as e:
             print(f"\n❌ BUY ERROR: {e}")

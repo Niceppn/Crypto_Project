@@ -1,0 +1,18 @@
+{
+  "method": "prediction_quality_score",
+  "components": {
+    "confidence_weight": 40,
+    "feature_quality_weight": 30,
+    "consistency_weight": 30
+  },
+  "thresholds": {
+    "recommended": 60,
+    "conservative": 70,
+    "aggressive": 50
+  },
+  "analysis": {
+    "window4_mean_quality": 66.21971430826297,
+    "window5_mean_quality": 64.53812765117885,
+    "quality_difference": -1.681586657084111
+  }
+}

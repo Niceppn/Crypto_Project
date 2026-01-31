@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 # CONFIGURATION
 # ==========================================
 CSV_FILE = "/Users/Macbook/Collect_Crypto/BTC_Future/BTCUSDC/btcusdc_training_data.csv"
-MODEL_FILE = "/Users/Macbook/Collect_Crypto/BTC_Future/test/BTCUSDC.txt"
+MODEL_FILE = "/Users/Macbook/Collect_Crypto/BTC_Future/test/btcusdc_training_data_regression.txt"
 
 # ✅ แก้ 1: เปลี่ยน parameter ranges สำหรับ regression model
 PARAMETER_RANGES = {

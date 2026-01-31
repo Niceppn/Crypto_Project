@@ -1,0 +1,186 @@
+{
+  "model_type": "multiclass_classification",
+  "num_classes": 3,
+  "class_names": [
+    "SKIP",
+    "BUY_MAKER",
+    "SELL_MAKER"
+  ],
+  "features": [
+    "net_flow",
+    "buy_sell_ratio",
+    "order_flow_imbalance",
+    "aggressive_buy_ratio",
+    "net_flow_ma5",
+    "net_flow_ma10",
+    "net_flow_ma30",
+    "net_flow_std5",
+    "net_flow_acceleration",
+    "cvd_60",
+    "cvd_300",
+    "total_volume",
+    "volume_ma5",
+    "volume_ma15",
+    "volume_ma30",
+    "volume_std5",
+    "volume_surge",
+    "relative_volume",
+    "buy_volume_pct",
+    "sell_volume_pct",
+    "hl_range",
+    "oc_diff",
+    "body_to_range_ratio",
+    "upper_wick",
+    "lower_wick",
+    "price_velocity",
+    "price_acceleration",
+    "price_change_pct_1",
+    "price_change_pct_5",
+    "price_change_pct_15",
+    "momentum_5",
+    "momentum_15",
+    "dist_from_ma5",
+    "dist_from_ma15",
+    "dist_from_ma30",
+    "ma5_slope",
+    "trade_count",
+    "avg_trade_size",
+    "trade_frequency",
+    "tick_momentum",
+    "rsi_5",
+    "rsi_14",
+    "bb_position",
+    "atr_5",
+    "volatility_regime",
+    "trend_strength",
+    "order_book_imbalance_proxy",
+    "ob_imbalance_ma5",
+    "ob_imbalance_ma15",
+    "spread_proxy",
+    "spread_ma5",
+    "spread_volatility",
+    "liquidity_score",
+    "liquidity_ma15",
+    "volume_concentration",
+    "hour_sin",
+    "hour_cos",
+    "minute_sin",
+    "minute_cos",
+    "dow_sin",
+    "dow_cos",
+    "momentum_3",
+    "momentum_10",
+    "momentum_30",
+    "acceleration_5",
+    "acceleration_15",
+    "momentum_strength",
+    "buy_pressure",
+    "sell_pressure",
+    "pressure_diff",
+    "cvd_momentum_5",
+    "cvd_momentum_15",
+    "flow_reversal"
+  ],
+  "num_features": 73,
+  "training_samples": 202736,
+  "test_samples": 50685,
+  "target_distribution": {
+    "skip": 250082,
+    "buy": 1683,
+    "sell": 1656
+  },
+  "class_weights": {
+    "0": 0.3365404407614722,
+    "1": 67.71409485637943,
+    "2": 72.35403283369023
+  },
+  "feature_importance": [
+    {
+      "feature": "momentum_30",
+      "importance": 1474
+    },
+    {
+      "feature": "volume_ma30",
+      "importance": 1346
+    },
+    {
+      "feature": "liquidity_ma15",
+      "importance": 1174
+    },
+    {
+      "feature": "spread_volatility",
+      "importance": 1112
+    },
+    {
+      "feature": "trend_strength",
+      "importance": 1068
+    },
+    {
+      "feature": "dist_from_ma15",
+      "importance": 963
+    },
+    {
+      "feature": "volatility_regime",
+      "importance": 933
+    },
+    {
+      "feature": "cvd_60",
+      "importance": 731
+    },
+    {
+      "feature": "atr_5",
+      "importance": 699
+    },
+    {
+      "feature": "volume_ma15",
+      "importance": 671
+    },
+    {
+      "feature": "dist_from_ma30",
+      "importance": 616
+    },
+    {
+      "feature": "rsi_14",
+      "importance": 564
+    },
+    {
+      "feature": "spread_ma5",
+      "importance": 545
+    },
+    {
+      "feature": "momentum_10",
+      "importance": 533
+    },
+    {
+      "feature": "dist_from_ma5",
+      "importance": 515
+    },
+    {
+      "feature": "minute_sin",
+      "importance": 515
+    },
+    {
+      "feature": "cvd_300",
+      "importance": 505
+    },
+    {
+      "feature": "hour_sin",
+      "importance": 495
+    },
+    {
+      "feature": "ob_imbalance_ma15",
+      "importance": 490
+    },
+    {
+      "feature": "rsi_5",
+      "importance": 489
+    }
+  ],
+  "hyperparameters": {
+    "n_estimators": 300,
+    "learning_rate": 0.02,
+    "num_leaves": 31,
+    "max_depth": 6,
+    "min_child_samples": 100
+  }
+}

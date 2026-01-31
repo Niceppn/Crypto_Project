@@ -1,0 +1,34 @@
+{
+  "num_windows": 5,
+  "features_used": 40,
+  "regularization": "heavy",
+  "parameters": {
+    "confidence_threshold": 0.75,
+    "maker_offset_pct": 0.0003,
+    "maker_timeout": 20,
+    "take_profit_pct": 0.0018,
+    "stop_loss_pct": 0.001,
+    "hold_time": 90,
+    "performance": {
+      "win_rate": 0.4401114206128134,
+      "return_pct": 1.7846652906720353,
+      "sharpe_ratio": 1.4856657189394382,
+      "profit_factor": 1.22962754673558
+    }
+  },
+  "statistics": {
+    "mean_win_rate": 0.5418616415208884,
+    "std_win_rate": 0.19793387609671048,
+    "mean_return_pct": -2.504551167025145,
+    "std_return_pct": 6.836660401365041,
+    "mean_sharpe": -0.14319497833488964,
+    "std_sharpe": 2.977452382418081,
+    "profitable_windows": 2,
+    "consistency_score": 0.4,
+    "stability_score": -0.3663413157870287
+  },
+  "rating": "\ud83d\udfe0 FAIR",
+  "verdict": "Model is inconsistent - use with caution",
+  "best_window": 5,
+  "worst_window": 4
+}

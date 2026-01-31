@@ -1,0 +1,25 @@
+{
+  "approach": "simple_filter",
+  "filter_params": {
+    "confidence_threshold": 0.95,
+    "volume_threshold": 0.4135333333333339,
+    "atr_threshold": 2.4399999999994177
+  },
+  "statistics": {
+    "mean_win_rate": 0.6359881363772415,
+    "std_win_rate": 0.3591092754838414,
+    "mean_return_pct": -1.0206562474375134,
+    "std_return_pct": 2.3625935229146355,
+    "mean_sharpe": 0.4166737566731188,
+    "std_sharpe": 2.850717193458092,
+    "profitable_windows": 3,
+    "consistency_score": 0.6
+  },
+  "comparison": {
+    "original_consistency": 0.4,
+    "filtered_consistency": 0.6,
+    "improvement": 0.19999999999999996
+  },
+  "rating": "\ud83d\udfe0 FAIR",
+  "verdict": "Marginal improvement"
+}

@@ -1,0 +1,16 @@
+{
+  "model1": {
+    "confidence_threshold": 0.75,
+    "maker_offset_pct": 0.0003,
+    "maker_timeout": 20,
+    "take_profit_pct": 0.0018,
+    "stop_loss_pct": 0.001,
+    "hold_time": 90,
+    "performance": {
+      "win_rate": 0.4401114206128134,
+      "return_pct": 1.7846652906720353,
+      "sharpe_ratio": 1.4856657189394382,
+      "profit_factor": 1.22962754673558
+    }
+  }
+}
