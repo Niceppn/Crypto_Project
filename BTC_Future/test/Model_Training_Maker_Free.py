@@ -12,7 +12,7 @@ DATA_SOURCE_PATH = '/Users/Macbook/Collect_Crypto/BTC_Future/test'
 MODEL_DEST_PATH = '/Users/Macbook/Collect_Crypto/BTC_Future/test'
 
 # --- Strategy Parameters (ปรับจูนได้) ---
-PROFIT_TARGET_PCT = 1.0003  # เป้ากำไร 0.03%
+PROFIT_TARGET_PCT = 0.0003  # เป้ากำไร 0.03%
 FILL_WINDOW = 20           # Window รอของเข้า (20 วินาที)
 PROFIT_WINDOW = 300        # Window รอขายทำกำไร (2 นาที)
 CONFIDENCE_THRESHOLD = 0.60 # ความมั่นใจขั้นต่ำ

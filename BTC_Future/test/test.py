@@ -10,7 +10,7 @@ from binance.enums import *
 # ==========================================
 SYMBOL_WS = "btcusdc"       # ชื่อสำหรับ Websocket (ตัวเล็ก)
 SYMBOL_TRADE = "BTCUSDC"    # ชื่อสำหรับส่งคำสั่ง (ตัวใหญ่)
-MODEL_FILE = "btcusdc_training_data.txt"
+MODEL_FILE = "/Users/Macbook/Collect_Crypto/BTC_Future/test/btcusdc_training_data.txt"
 
 # --- TELEGRAM ---
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
@@ -18,21 +18,24 @@ TG_CHAT_ID = "8440162744"
 
 # --- API KEYS ---
 API_KEY = "1EVQwptQguKnWL2ZG0aFNo4VQYfWj3pa2k6oxDT7JeLzjUeqPZqMsfPxsxBuPShy"
-SECRET_KEY = "ePHw4rwFMTrkwwmdruClXQzOSX9WRvMVFulDDWeAjkZvrHAGkEAIkr3h1HeCsqyv"
+SECRET_KEY = "ePHw4rwFMTrkwwmdruClXQzOSX9WRvMVFulDDWeAjkZvrHAGkEAIkr3h1HeCsqyv" 
 
 # --- Strategy (สามารถปรับผ่าน Telegram ได้) ---
 CONFIDENCE_THRESHOLD = 0.40  # ความมั่นใจ AI (สามารถปรับได้)
 CAPITAL_PER_TRADE = 200      # ทุนต่อไม้ (สามารถปรับได้)
-HOLDING_TIME = 2000           # วินาที (สามารถปรับได้)
-PROFIT_TARGET_PCT = 0.00015   # % (สามารถปรับได้)
-STOP_LOSS_PCT = 0.009        # % (สามารถปรับได้)
-MAKER_BUY_OFFSET_PCT = 0.00001
+HOLDING_TIME = 1000           # วินาที (สามารถปรับได้)
+PROFIT_TARGET_PCT = 0.00055   # % (สามารถปรับได้)
+STOP_LOSS_PCT = 0.007        # % (สามารถปรับได้)
+MAKER_BUY_OFFSET_PCT = 0.0000001
 MAKER_ORDER_TIMEOUT = 60     # Timeout ของ Limit Order (สามารถปรับได้)
 STATUS_REPORT_INTERVAL = 3800  # 30 นาที
 
 # --- Concurrent Positions ---
-MAX_POSITIONS = 2            # เปิดได้สูงสุด 2 ไม้พร้อมกัน
-COOLDOWN_SECONDS = 30        # cooldown ระหว่างไม้ (วินาที)
+MAX_POSITIONS = 4            # เปิดได้สูงสุด 4 ไม้พร้อมกัน
+COOLDOWN_SECONDS = 180        # cooldown ระหว่างไม้ (วินาที)
+SLOT2_COOLDOWN_SECONDS = 120   # cooldown สำหรับไม้ที่ 2 (วินาที)
+SLOT3_COOLDOWN_SECONDS = 60   # cooldown สำหรับไม้ที่ 3 (วินาที)
+SLOT4_COOLDOWN_SECONDS = 180   # cooldown สำหรับไม้ที่ 4 (วินาที)
 
 # ==========================================
 # 2. CONNECT TO BINANCE
@@ -93,6 +96,41 @@ def send_status_report():
         total_trades = stats['win'] + stats['loss'] + stats['breakeven']
         win_rate = (stats['win'] / total_trades * 100) if total_trades > 0 else 0
         
+        # สร้างข้อความสถานะ slot แบบ dynamic
+        slot_status = ""
+        if len(active_orders) == 1 and active_orders[0]['slot'] == 0:
+            # มีแค่ slot 1 ใช้งาน แสดงเวลาที่เหลือของ slot 2
+            elapsed = int(current_time - active_orders[0]['entry_ts'])
+            remaining = max(0, SLOT2_COOLDOWN_SECONDS - elapsed)
+            if remaining > 0:
+                slot_status = f"🔹 Slot 1: ใช้งานที่ ${active_orders[0]['entry']:.2f} | TP: ${active_orders[0]['take_profit']:.2f}\n🔹 Slot 2: เหลือเวลา {remaining}วิก่อนเข้า\n🔹 Slot 3: รอไม้ 2"
+            else:
+                slot_status = f"🔹 Slot 1: ใช้งานที่ ${active_orders[0]['entry']:.2f} | TP: ${active_orders[0]['take_profit']:.2f}\n🔹 Slot 2: ✅ พร้อมเข้า\n🔹 Slot 3: รอไม้ 2"
+        elif len(active_orders) == 2:
+            # มี slot 1 และ slot 2 ใช้งาน
+            slot1 = next((o for o in active_orders if o['slot'] == 0), None)
+            slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+            if slot2:
+                elapsed = int(current_time - slot2['entry_ts'])
+                remaining = max(0, SLOT3_COOLDOWN_SECONDS - elapsed)
+                if remaining > 0:
+                    slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: เหลือเวลา {remaining}วิก่อนเข้า"
+                else:
+                    slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ✅ พร้อมเข้า"
+        elif len(active_orders) == 3:
+            # มีทั้ง 3 slots ใช้งาน
+            slot1 = next((o for o in active_orders if o['slot'] == 0), None)
+            slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+            slot3 = next((o for o in active_orders if o['slot'] == 2), None)
+            slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ใช้งานที่ ${slot3['entry']:.2f} | TP: ${slot3['take_profit']:.2f}\n🔹 Slot 4: รอไม้ 3"
+        elif len(active_orders) == 4:
+            # มีทั้ง 4 slots ใช้งาน
+            slot1 = next((o for o in active_orders if o['slot'] == 0), None)
+            slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+            slot3 = next((o for o in active_orders if o['slot'] == 2), None)
+            slot4 = next((o for o in active_orders if o['slot'] == 3), None)
+            slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ใช้งานที่ ${slot3['entry']:.2f} | TP: ${slot3['take_profit']:.2f}\n🔹 Slot 4: ใช้งานที่ ${slot4['entry']:.2f} | TP: ${slot4['take_profit']:.2f}"
+        
         send_tg_msg(
             f"📊 <b>AUTO REPORT (30 min)</b>\n"
             f"━━━━━━━━━━━━━━━━\n"
@@ -106,7 +144,9 @@ def send_status_report():
             f"📈 Win Rate: <b>{win_rate:.1f}%</b>\n"
             f"━━━━━━━━━━━━━━━━\n"
             f"📋 Active: {len(active_orders)}\n"
-            f"⏱️ Pending: {len(pending_orders)}"
+            f"⏱️ Pending: {len(pending_orders)}\n"
+            f"━━━━━━━━━━━━━━━━\n"
+            f"{slot_status}"
         )
         last_status_report_time = current_time
 
@@ -134,9 +174,17 @@ def handle_telegram_commands():
     
     updates = get_telegram_updates()
     for update in updates:
+        # ตรวจสอบว่า update มี update_id หรือไม่
+        if 'update_id' not in update:
+            continue
         last_update_id = update['update_id']
         
-        if 'message' not in update or 'text' not in update['message']:
+        # ตรวจสอบว่ามี message และไม่ใช่ None
+        if 'message' not in update or not update['message']:
+            continue
+        
+        # ตรวจสอบว่า message มี text หรือไม่
+        if 'text' not in update['message'] or not update['message']['text']:
             continue
             
         message = update['message']['text'].strip()
@@ -153,6 +201,43 @@ def handle_telegram_commands():
             except:
                 balance_text = "💰 Balance: N/A"
             
+            # สร้างข้อความสถานะ slot แบบ dynamic
+            slot_status = ""
+            if len(active_orders) == 1 and active_orders[0]['slot'] == 0:
+                # มีแค่ slot 1 ใช้งาน แสดงเวลาที่เหลือของ slot 2
+                elapsed = int(time.time() - active_orders[0]['entry_ts'])
+                remaining = max(0, SLOT2_COOLDOWN_SECONDS - elapsed)
+                if remaining > 0:
+                    slot_status = f"🔹 Slot 1: ใช้งานที่ ${active_orders[0]['entry']:.2f} | TP: ${active_orders[0]['take_profit']:.2f}\n🔹 Slot 2: เหลือเวลา {remaining}วิก่อนเข้า\n🔹 Slot 3: รอไม้ 2"
+                else:
+                    slot_status = f"🔹 Slot 1: ใช้งานที่ ${active_orders[0]['entry']:.2f} | TP: ${active_orders[0]['take_profit']:.2f}\n🔹 Slot 2: ✅ พร้อมเข้า\n🔹 Slot 3: รอไม้ 2"
+            elif len(active_orders) == 2:
+                # มี slot 1 และ slot 2 ใช้งาน
+                slot1 = next((o for o in active_orders if o['slot'] == 0), None)
+                slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+                if slot2:
+                    elapsed = int(time.time() - slot2['entry_ts'])
+                    remaining = max(0, SLOT3_COOLDOWN_SECONDS - elapsed)
+                    if remaining > 0:
+                        slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: เหลือเวลา {remaining}วิก่อนเข้า"
+                    else:
+                        slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ✅ พร้อมเข้า"
+            elif len(active_orders) == 3:
+                # มีทั้ง 3 slots ใช้งาน
+                slot1 = next((o for o in active_orders if o['slot'] == 0), None)
+                slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+                slot3 = next((o for o in active_orders if o['slot'] == 2), None)
+                slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ใช้งานที่ ${slot3['entry']:.2f} | TP: ${slot3['take_profit']:.2f}\n🔹 Slot 4: รอไม้ 3"
+            elif len(active_orders) == 4:
+                # มีทั้ง 4 slots ใช้งาน
+                slot1 = next((o for o in active_orders if o['slot'] == 0), None)
+                slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+                slot3 = next((o for o in active_orders if o['slot'] == 2), None)
+                slot4 = next((o for o in active_orders if o['slot'] == 3), None)
+                slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ใช้งานที่ ${slot3['entry']:.2f} | TP: ${slot3['take_profit']:.2f}\n🔹 Slot 4: ใช้งานที่ ${slot4['entry']:.2f} | TP: ${slot4['take_profit']:.2f}"
+            else:
+                slot_status = f"🔹 Slot 1: ✓ พร้อม\n🔹 Slot 2: รอไม้ 1\n🔹 Slot 3: รอไม้ 2\n🔹 Slot 4: รอไม้ 3"
+            
             send_tg_msg(
                 f"📊 <b>BOT STATUS</b>\n"
                 f"━━━━━━━━━━━━━━━━\n"
@@ -168,8 +253,8 @@ def handle_telegram_commands():
                 f"━━━━━━━━━━━━━━━━\n"
                 f"📋 Active Orders: {len(active_orders)}\n"
                 f"⏱️ Pending Orders: {len(pending_orders)}\n"
-                f"🔄 Slot 1: {'✓ พร้อม' if len(active_orders) + len(pending_orders) == 0 else 'ใช้งาน'}\n"
-                f"🔄 Slot 2: {'✓ พร้อม' if (len(active_orders) == 1 and (int(time.time()) - active_orders[0].get('entry_ts', int(time.time()))) >= COOLDOWN_SECONDS) else 'รอ cooldown' if len(active_orders) == 1 else 'รอไม้ 1'}\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"🔄 {slot_status}\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"⚙️ <b>SETTINGS:</b>\n"
                 f"🤖 AI Confidence: {CONFIDENCE_THRESHOLD*100:.0f}%\n"
@@ -524,7 +609,17 @@ def check_pending_orders(current_price, current_ts):
     
     for order in pending_orders[:]:
         if current_price <= order['limit_price']:
-            print(f"\n✅ [FILLED] Slot {order['slot']} | Maker Buy @ {order['limit_price']:.2f} | TP: {order['take_profit']:.2f} | SL: {order['stop_loss']:.2f}")
+            # ส่ง Telegram แจ้งว่าไม้ 1 filled
+            if order['slot'] == 0:
+                send_tg_msg(
+                    f"🟢 <b>POSITION 1 FILLED</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📥 Entry: ${order['limit_price']:.2f}\n"
+                    f"🎯 TP: ${order['take_profit']:.2f}\n"
+                    f"🛑 SL: ${order['stop_loss']:.2f}\n"
+                    f"🤖 AI Conf: {order.get('confidence', 0)*100:.2f}%\n"
+                    f"⏰ Waiting 60s for Position 2..."
+                )
             
             sell_order = place_limit_sell(SYMBOL_TRADE, order['quantity'], order['take_profit'])
             
@@ -559,6 +654,35 @@ def check_pending_orders(current_price, current_ts):
                 })
             
             pending_orders.remove(order)
+            
+            # ส่ง Telegram อัพเดทสถานะหลังจาก filled
+            if len(active_orders) == 1 and active_orders[0]['slot'] == 0:
+                send_tg_msg(
+                    f"📊 <b>POSITION STATUS</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"🔹 Slot 1: ใช้งาน\n"
+                    f"📥 Entry: ${active_orders[0]['entry']:.2f}\n"
+                    f"🎯 TP: ${active_orders[0]['take_profit']:.2f}\n"
+                    f"💰 Current: ${current_price:.2f}\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"🔹 Slot 2: เหลือเวลา 180วิก่อนเข้า\n"
+                    f"🔹 Slot 3: รอไม้ 2"
+                )
+            elif len(active_orders) == 2:
+                # หา slot 1 และ slot 2
+                slot1 = next((o for o in active_orders if o['slot'] == 0), None)
+                slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+                if slot2:
+                    elapsed = int(current_ts - slot2['entry_ts'])
+                    remaining = max(0, SLOT3_COOLDOWN_SECONDS - elapsed)
+                    send_tg_msg(
+                        f"📊 <b>POSITION STATUS</b>\n"
+                        f"━━━━━━━━━━━━━━━━\n"
+                        f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n"
+                        f"🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n"
+                        f"━━━━━━━━━━━━━━━━\n"
+                        f"🔹 Slot 3: เหลือเวลา {remaining}วิก่อนเข้า"
+                    )
         
         elif current_ts >= order['timeout_ts']:
             stats['unfilled'] += 1
@@ -637,8 +761,39 @@ def get_available_slot(current_ts):
         first_active_order = active_orders[0]
         entry_time = first_active_order.get('entry_ts', current_ts)
         
-        if entry_time and (current_ts - entry_time) >= COOLDOWN_SECONDS:
-            return 1  # slot ที่สองพร้อมหลังจากผ่าน cooldown และต้องมีสัญญาณใหม่
+        # ตรวจสอบว่าผ่าน SLOT2_COOLDOWN_SECONDS วินาทีแล้วหรือยัง
+        if entry_time and (current_ts - entry_time) >= SLOT2_COOLDOWN_SECONDS:
+            return 1  # slot ที่สองพร้อมหลังจากผ่าน SLOT2_COOLDOWN_SECONDS วินาที
+    
+    # ถ้ามี order อยู่แล้ว 2 orders ให้ตรวจสอบว่าเป็น active orders หรือไม่
+    if total_open == 2 and len(active_orders) == 2:
+        # หา order ที่สอง (slot 1)
+        second_active_order = None
+        for order in active_orders:
+            if order['slot'] == 1:
+                second_active_order = order
+                break
+        
+        if second_active_order:
+            entry_time = second_active_order.get('entry_ts', current_ts)
+            # ตรวจสอบว่าผ่าน SLOT3_COOLDOWN_SECONDS วินาทีจากไม้ 2 แล้วหรือยัง
+            if entry_time and (current_ts - entry_time) >= SLOT3_COOLDOWN_SECONDS:
+                return 2  # slot ที่สามพร้อมหลังจากผ่าน SLOT3_COOLDOWN_SECONDS วินาทีจากไม้ 2
+    
+    # ถ้ามี order อยู่แล้ว 3 orders ให้ตรวจสอบว่าเป็น active orders หรือไม่
+    if total_open == 3 and len(active_orders) == 3:
+        # หา order ที่สาม (slot 2)
+        third_active_order = None
+        for order in active_orders:
+            if order['slot'] == 2:
+                third_active_order = order
+                break
+        
+        if third_active_order:
+            entry_time = third_active_order.get('entry_ts', current_ts)
+            # ตรวจสอบว่าผ่าน SLOT4_COOLDOWN_SECONDS วินาทีจากไม้ 3 แล้วหรือยัง
+            if entry_time and (current_ts - entry_time) >= SLOT4_COOLDOWN_SECONDS:
+                return 3  # slot ที่สี่พร้อมหลังจากผ่าน SLOT4_COOLDOWN_SECONDS วินาทีจากไม้ 3
     
     return None  # ไม่มี slot ที่พร้อม
 
@@ -679,7 +834,23 @@ def predict(data_list, last_price, current_ts):
         elif i == 1 and len(active_orders) > 0:
             # Slot 2: แสดง cooldown จาก entry_ts ของ active order แรก
             entry_time = active_orders[0].get('entry_ts', current_ts)
-            remaining = max(0, COOLDOWN_SECONDS - (current_ts - entry_time))
+            remaining = max(0, SLOT2_COOLDOWN_SECONDS - (current_ts - entry_time))
+        elif i == 2 and len(active_orders) >= 2:
+            # Slot 3: แสดง cooldown จาก entry_ts ของ active order ที่สอง
+            slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+            if slot2:
+                entry_time = slot2.get('entry_ts', current_ts)
+                remaining = max(0, SLOT3_COOLDOWN_SECONDS - (current_ts - entry_time))
+            else:
+                remaining = 0
+        elif i == 3 and len(active_orders) >= 3:
+            # Slot 4: แสดง cooldown จาก entry_ts ของ active order ที่สาม
+            slot3 = next((o for o in active_orders if o['slot'] == 2), None)
+            if slot3:
+                entry_time = slot3.get('entry_ts', current_ts)
+                remaining = max(0, SLOT4_COOLDOWN_SECONDS - (current_ts - entry_time))
+            else:
+                remaining = 0
         else:
             remaining = 0
         
@@ -695,6 +866,65 @@ def predict(data_list, last_price, current_ts):
             sl = limit_buy_price * (1 - STOP_LOSS_PCT)
             
             print(f"\n⚡ [LIMIT BUY] Slot {available_slot} @ {limit_buy_price:.2f} (Current: {last_price:.2f}) | AI: {prob*100:.2f}% | TP: {tp:.2f} | SL: {sl:.2f}")
+            
+            # ส่ง Telegram แจ้งว่าเปิดไม้ 2
+            if available_slot == 1:
+                # ดูราคาปัจจุบันของไม้ 1
+                pos1_info = ""
+                if len(active_orders) > 0:
+                    pos1 = active_orders[0]
+                    pos1_info = f"\n📊 Position 1:\n📥 Entry: ${pos1['entry']:.2f}\n🎯 TP: ${pos1['take_profit']:.2f}\n💰 Current: ${last_price:.2f}"
+                
+                send_tg_msg(
+                    f"🔥 <b>POSITION 2 OPENED</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📥 Entry: ${limit_buy_price:.2f}\n"
+                    f"🎯 TP: ${tp:.2f}\n"
+                    f"🛑 SL: ${sl:.2f}\n"
+                    f"🤖 AI Conf: {prob*100:.2f}%"
+                    f"{pos1_info}"
+                )
+            
+            # ส่ง Telegram แจ้งว่าเปิดไม้ 3
+            elif available_slot == 2:
+                # ดูราคาปัจจุบันของไม้ 1 และ 2
+                pos_info = ""
+                if len(active_orders) >= 2:
+                    slot1 = next((o for o in active_orders if o['slot'] == 0), None)
+                    slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+                    if slot1 and slot2:
+                        pos_info = f"\n📊 Position 1:\n📥 Entry: ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n📊 Position 2:\n📥 Entry: ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n💰 Current: ${last_price:.2f}"
+                
+                send_tg_msg(
+                    f"🔥🔥 <b>POSITION 3 OPENED</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📥 Entry: ${limit_buy_price:.2f}\n"
+                    f"🎯 TP: ${tp:.2f}\n"
+                    f"🛑 SL: ${sl:.2f}\n"
+                    f"🤖 AI Conf: {prob*100:.2f}%"
+                    f"{pos_info}"
+                )
+            
+            # ส่ง Telegram แจ้งว่าเปิดไม้ 4
+            elif available_slot == 3:
+                # ดูราคาปัจจุบันของไม้ 1, 2 และ 3
+                pos_info = ""
+                if len(active_orders) >= 3:
+                    slot1 = next((o for o in active_orders if o['slot'] == 0), None)
+                    slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+                    slot3 = next((o for o in active_orders if o['slot'] == 2), None)
+                    if slot1 and slot2 and slot3:
+                        pos_info = f"\n📊 Position 1:\n📥 Entry: ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n📊 Position 2:\n📥 Entry: ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n📊 Position 3:\n📥 Entry: ${slot3['entry']:.2f} | TP: ${slot3['take_profit']:.2f}\n💰 Current: ${last_price:.2f}"
+                
+                send_tg_msg(
+                    f"🔥🔥🔥 <b>POSITION 4 OPENED</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📥 Entry: ${limit_buy_price:.2f}\n"
+                    f"🎯 TP: ${tp:.2f}\n"
+                    f"🛑 SL: ${sl:.2f}\n"
+                    f"🤖 AI Conf: {prob*100:.2f}%"
+                    f"{pos_info}"
+                )
             
             order_response = place_limit_buy(SYMBOL_TRADE, qty, limit_buy_price)
             
