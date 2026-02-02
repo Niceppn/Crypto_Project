@@ -24,7 +24,7 @@ SECRET_KEY = "ePHw4rwFMTrkwwmdruClXQzOSX9WRvMVFulDDWeAjkZvrHAGkEAIkr3h1HeCsqyv"
 CONFIDENCE_THRESHOLD = 0.40  # ความมั่นใจ AI (สามารถปรับได้)
 CAPITAL_PER_TRADE = 200      # ทุนต่อไม้ (สามารถปรับได้)
 HOLDING_TIME = 1000           # วินาที (สามารถปรับได้)
-PROFIT_TARGET_PCT = 0.00065   # % (สามารถปรับได้)
+PROFIT_TARGET_PCT = 0.00075   # % (สามารถปรับได้)
 STOP_LOSS_PCT = 0.007        # % (สามารถปรับได้)
 MAKER_BUY_OFFSET_PCT = 0.0000001
 MAKER_ORDER_TIMEOUT = 60     # Timeout ของ Limit Order (สามารถปรับได้)
@@ -737,7 +737,8 @@ def check_orders(current_price, current_ts):
             reason = "TIME EXIT (TAKER) ⏳"
 
         if is_exit:
-            if not is_tp_hit and order.get('sell_order_id'):
+            # ยกเลิก Limit Sell Order ก่อนเสมอ ไม่ว่าจะเป็นกรณีใดก็ตาม
+            if order.get('sell_order_id'):
                 print(f"🔄 Cancelling Limit Sell Order...")
                 cancel_order(SYMBOL_TRADE, order['sell_order_id'])
                 success = close_position(SYMBOL_TRADE, order['quantity'], reason)
