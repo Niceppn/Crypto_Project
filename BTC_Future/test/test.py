@@ -24,7 +24,7 @@ SECRET_KEY = "ePHw4rwFMTrkwwmdruClXQzOSX9WRvMVFulDDWeAjkZvrHAGkEAIkr3h1HeCsqyv"
 CONFIDENCE_THRESHOLD = 0.40  # ความมั่นใจ AI (สามารถปรับได้)
 CAPITAL_PER_TRADE = 200      # ทุนต่อไม้ (สามารถปรับได้)
 HOLDING_TIME = 1000           # วินาที (สามารถปรับได้)
-PROFIT_TARGET_PCT = 0.00055   # % (สามารถปรับได้)
+PROFIT_TARGET_PCT = 0.00065   # % (สามารถปรับได้)
 STOP_LOSS_PCT = 0.007        # % (สามารถปรับได้)
 MAKER_BUY_OFFSET_PCT = 0.0000001
 MAKER_ORDER_TIMEOUT = 60     # Timeout ของ Limit Order (สามารถปรับได้)
@@ -205,36 +205,48 @@ def handle_telegram_commands():
             slot_status = ""
             if len(active_orders) == 1 and active_orders[0]['slot'] == 0:
                 # มีแค่ slot 1 ใช้งาน แสดงเวลาที่เหลือของ slot 2
-                elapsed = int(time.time() - active_orders[0]['entry_ts'])
-                remaining = max(0, SLOT2_COOLDOWN_SECONDS - elapsed)
-                if remaining > 0:
-                    slot_status = f"🔹 Slot 1: ใช้งานที่ ${active_orders[0]['entry']:.2f} | TP: ${active_orders[0]['take_profit']:.2f}\n🔹 Slot 2: เหลือเวลา {remaining}วิก่อนเข้า\n🔹 Slot 3: รอไม้ 2"
+                slot0 = active_orders[0]
+                if slot0 and 'entry' in slot0 and 'take_profit' in slot0 and 'entry_ts' in slot0:
+                    elapsed = int(time.time() - slot0['entry_ts'])
+                    remaining = max(0, SLOT2_COOLDOWN_SECONDS - elapsed)
+                    if remaining > 0:
+                        slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot0['entry']:.2f} | TP: ${slot0['take_profit']:.2f}\n🔹 Slot 2: เหลือเวลา {remaining}วิก่อนเข้า\n🔹 Slot 3: รอไม้ 2\n🔹 Slot 4: รอไม้ 3"
+                    else:
+                        slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot0['entry']:.2f} | TP: ${slot0['take_profit']:.2f}\n🔹 Slot 2: ✅ พร้อมเข้า\n🔹 Slot 3: รอไม้ 2\n🔹 Slot 4: รอไม้ 3"
                 else:
-                    slot_status = f"🔹 Slot 1: ใช้งานที่ ${active_orders[0]['entry']:.2f} | TP: ${active_orders[0]['take_profit']:.2f}\n🔹 Slot 2: ✅ พร้อมเข้า\n🔹 Slot 3: รอไม้ 2"
+                    slot_status = "🔹 Slot 1: กำลังประมวลผล...\n🔹 Slot 2: รอไม้ 1\n🔹 Slot 3: รอไม้ 2\n🔹 Slot 4: รอไม้ 3"
             elif len(active_orders) == 2:
                 # มี slot 1 และ slot 2 ใช้งาน
                 slot1 = next((o for o in active_orders if o['slot'] == 0), None)
                 slot2 = next((o for o in active_orders if o['slot'] == 1), None)
-                if slot2:
+                if slot1 and slot2 and all(key in slot1 for key in ['entry', 'take_profit']) and all(key in slot2 for key in ['entry', 'take_profit', 'entry_ts']):
                     elapsed = int(time.time() - slot2['entry_ts'])
                     remaining = max(0, SLOT3_COOLDOWN_SECONDS - elapsed)
                     if remaining > 0:
-                        slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: เหลือเวลา {remaining}วิก่อนเข้า"
+                        slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: เหลือเวลา {remaining}วิก่อนเข้า\n🔹 Slot 4: รอไม้ 3"
                     else:
-                        slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ✅ พร้อมเข้า"
+                        slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ✅ พร้อมเข้า\n🔹 Slot 4: รอไม้ 3"
+                else:
+                    slot_status = "🔹 Slot 1: กำลังประมวลผล...\n🔹 Slot 2: กำลังประมวลผล...\n🔹 Slot 3: รอไม้ 2\n🔹 Slot 4: รอไม้ 3"
             elif len(active_orders) == 3:
                 # มีทั้ง 3 slots ใช้งาน
                 slot1 = next((o for o in active_orders if o['slot'] == 0), None)
                 slot2 = next((o for o in active_orders if o['slot'] == 1), None)
                 slot3 = next((o for o in active_orders if o['slot'] == 2), None)
-                slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ใช้งานที่ ${slot3['entry']:.2f} | TP: ${slot3['take_profit']:.2f}\n🔹 Slot 4: รอไม้ 3"
+                if all(slot and all(key in slot for key in ['entry', 'take_profit']) for slot in [slot1, slot2, slot3]):
+                    slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ใช้งานที่ ${slot3['entry']:.2f} | TP: ${slot3['take_profit']:.2f}\n🔹 Slot 4: รอไม้ 3"
+                else:
+                    slot_status = "🔹 Slot 1: กำลังประมวลผล...\n🔹 Slot 2: กำลังประมวลผล...\n🔹 Slot 3: กำลังประมวลผล...\n🔹 Slot 4: รอไม้ 3"
             elif len(active_orders) == 4:
                 # มีทั้ง 4 slots ใช้งาน
                 slot1 = next((o for o in active_orders if o['slot'] == 0), None)
                 slot2 = next((o for o in active_orders if o['slot'] == 1), None)
                 slot3 = next((o for o in active_orders if o['slot'] == 2), None)
                 slot4 = next((o for o in active_orders if o['slot'] == 3), None)
-                slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ใช้งานที่ ${slot3['entry']:.2f} | TP: ${slot3['take_profit']:.2f}\n🔹 Slot 4: ใช้งานที่ ${slot4['entry']:.2f} | TP: ${slot4['take_profit']:.2f}"
+                if all(slot and all(key in slot for key in ['entry', 'take_profit']) for slot in [slot1, slot2, slot3, slot4]):
+                    slot_status = f"🔹 Slot 1: ใช้งานที่ ${slot1['entry']:.2f} | TP: ${slot1['take_profit']:.2f}\n🔹 Slot 2: ใช้งานที่ ${slot2['entry']:.2f} | TP: ${slot2['take_profit']:.2f}\n🔹 Slot 3: ใช้งานที่ ${slot3['entry']:.2f} | TP: ${slot3['take_profit']:.2f}\n🔹 Slot 4: ใช้งานที่ ${slot4['entry']:.2f} | TP: ${slot4['take_profit']:.2f}"
+                else:
+                    slot_status = "🔹 Slot 1: กำลังประมวลผล...\n🔹 Slot 2: กำลังประมวลผล...\n🔹 Slot 3: กำลังประมวลผล...\n🔹 Slot 4: กำลังประมวลผล..."
             else:
                 slot_status = f"🔹 Slot 1: ✓ พร้อม\n🔹 Slot 2: รอไม้ 1\n🔹 Slot 3: รอไม้ 2\n🔹 Slot 4: รอไม้ 3"
             

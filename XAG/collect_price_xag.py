@@ -11,9 +11,9 @@ from datetime import datetime
 # =========================
 # Configuration
 # =========================
-SYMBOL = "btcusdc"
-SOCKET = f"wss://demo-fstream.binance.com/ws/{SYMBOL}@aggTrade"
-FILENAME = "btcusdc_training_data.csv"
+SYMBOL = "xagusdt"
+SOCKET = f"wss://demo-dstream.binance.com/ws/{SYMBOL}@aggTrade"
+FILENAME = "xagusdt_training_data.csv"
 RECONNECT_DELAY = 5  # seconds
 
 # =========================
