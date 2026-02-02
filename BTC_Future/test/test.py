@@ -25,8 +25,9 @@ CONFIDENCE_THRESHOLD = 0.40  # ความมั่นใจ AI (สามา�
 CAPITAL_PER_TRADE = 200      # ทุนต่อไม้ (สามารถปรับได้)
 HOLDING_TIME = 1000           # วินาที (สามารถปรับได้)
 PROFIT_TARGET_PCT = 0.00075   # % (สามารถปรับได้)
-STOP_LOSS_PCT = 0.007        # % (สามารถปรับได้)
-MAKER_BUY_OFFSET_PCT = 0.0000001
+STOP_LOSS_PCT = 0.005        # % (สามารถปรับได้)
+MAKER_BUY_OFFSET_PCT_LOW = 0.0000001   # offset สำหรับ buy order ที่ 1 (ต่ำกว่าราคาปัจจุบัน)
+MAKER_BUY_OFFSET_PCT_HIGH = 0.000001   # offset สำหรับ buy order ที่ 2 (สูงกว่าราคาปัจจุบัน)
 MAKER_ORDER_TIMEOUT = 60     # Timeout ของ Limit Order (สามารถปรับได้)
 STATUS_REPORT_INTERVAL = 3800  # 30 นาที
 
@@ -62,6 +63,7 @@ total_pnl_cash = 0.0
 active_orders = []
 pending_orders = []
 timeout_history = []  # เก็บประวัติ order ที่ timeout
+loss_history = []     # เก็บประวัติการ loss และสาเหตุ
 last_trade_time_per_slot = [0] * MAX_POSITIONS  # cooldown แต่ละ slot
 last_status_report_time = time.time()
 last_update_id = 0
@@ -438,6 +440,42 @@ def handle_telegram_commands():
             except:
                 send_tg_msg("❌ รูปแบบไม่ถูกต้อง\nใช้: /set_holding 600")
         
+        # /lossreason (ดูสาเหตุการ loss)
+        elif message == '/lossreason':
+            global loss_history
+            if not loss_history:
+                send_tg_msg(
+                    f"📊 <b>LOSS REASON ANALYSIS</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"✅ ยังไม่มีการ loss ครับ! 🎉"
+                )
+            else:
+                # นับสาเหตุการ loss
+                sl_count = sum(1 for loss in loss_history if 'STOP LOSS' in loss['reason'])
+                time_count = sum(1 for loss in loss_history if 'TIME EXIT' in loss['reason'])
+                
+                # สร้างรายการ loss ล่าสุด 5 อัน
+                recent_losses = loss_history[-5:] if len(loss_history) > 5 else loss_history
+                loss_details = ""
+                for i, loss in enumerate(recent_losses, 1):
+                    loss_details += f"\n{i}. ⏰ {loss['time']} | Slot {loss['slot']+1}\n"
+                    loss_details += f"   📥 Entry: ${loss['entry']:.2f}\n"
+                    loss_details += f"   📤 Exit: ${loss['exit']:.2f}\n"
+                    loss_details += f"   💸 PNL: ${loss['pnl']:.4f}\n"
+                    loss_details += f"   🎯 AI: {loss['confidence']*100:.1f}%\n"
+                    loss_details += f"   ⏱️ Hold: {loss['hold_time']:.0f}s\n"
+                    loss_details += f"   📝 {loss['reason']}\n"
+                
+                send_tg_msg(
+                    f"📊 <b>LOSS REASON ANALYSIS</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📈 Total Losses: <b>{len(loss_history)}</b>\n"
+                    f"🛑 Stop Loss: <b>{sl_count}</b>\n"
+                    f"⏰ Time Exit: <b>{time_count}</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"<b>Recent Losses (Last 5):</b>{loss_details}"
+                )
+        
         # /stop
         elif message == '/stop':
             IS_RUNNING = False
@@ -594,6 +632,39 @@ def place_limit_sell(symbol, quantity, limit_price):
         print(f"❌ Error Placing Limit Sell: {e}")
         return None
 
+def place_dual_buy_orders(symbol, quantity, low_price, high_price):
+    """สร้าง Buy orders 2 อัน - อันต่ำกว่าและสูงกว่าราคาปัจจุบัน และคืนอันที่ match ก่อน"""
+    try:
+        # สร้าง Buy order ที่ 1 (ต่ำกว่าราคาปัจจุบัน)
+        buy_order_low = client.futures_create_order(
+            symbol=symbol,
+            side='BUY',
+            type='LIMIT',
+            quantity=quantity,
+            price=str(round(low_price, 1)),
+            timeInForce='GTC'
+        )
+        
+        # สร้าง Buy order ที่ 2 (สูงกว่าราคาปัจจุบัน)
+        buy_order_high = client.futures_create_order(
+            symbol=symbol,
+            side='BUY',
+            type='LIMIT',
+            quantity=quantity,
+            price=str(round(high_price, 1)),
+            timeInForce='GTC'
+        )
+        
+        print(f"🔄 Placed Dual Buy Orders:")
+        print(f"   📥 Buy Low @ ${low_price:.2f} | ID: {buy_order_low.get('orderId')}")
+        print(f"   📥 Buy High @ ${high_price:.2f} | ID: {buy_order_high.get('orderId')}")
+        
+        return buy_order_low, buy_order_high
+        
+    except Exception as e:
+        print(f"❌ Error Placing Dual Buy Orders: {e}")
+        return None, None
+
 def cancel_order(symbol, order_id):
     try:
         client.futures_cancel_order(symbol=symbol, orderId=order_id)
@@ -749,9 +820,27 @@ def check_orders(current_price, current_ts):
                 profit = (current_price - order['entry']) * order['quantity']
                 total_pnl_cash += profit
                 
-                if profit > 0: stats['win'] += 1
-                elif profit < 0: stats['loss'] += 1
-                else: stats['breakeven'] += 1
+                if profit > 0: 
+                    stats['win'] += 1
+                elif profit < 0: 
+                    stats['loss'] += 1
+                    # เก็บประวัติการ loss
+                    loss_record = {
+                        'time': datetime.datetime.now().strftime('%H:%M:%S'),
+                        'slot': order['slot'],
+                        'entry': order['entry'],
+                        'exit': current_price,
+                        'pnl': profit,
+                        'reason': reason,
+                        'confidence': order.get('confidence', 0),
+                        'hold_time': current_ts - order.get('entry_ts', current_ts)
+                    }
+                    loss_history.append(loss_record)
+                    # เก็บแค่ 20 อันล่าสุด
+                    if len(loss_history) > 20:
+                        loss_history.pop(0)
+                else: 
+                    stats['breakeven'] += 1
                 
                 confidence = order.get('confidence', 0)
                 print(f"✅ SOLD [Slot {order['slot']}]: {current_price:.2f} | PNL: {profit:.4f} USDT | Total: {total_pnl_cash:.4f} | AI: {confidence*100:.2f}% | {reason}")
