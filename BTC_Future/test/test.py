@@ -90,7 +90,7 @@ def send_tg_msg(msg):
 
 def send_status_report():
     """ส่งรายงานสถานะทุก 30 นาที"""
-    global last_status_report_time
+    global last_status_report_time, active_orders, stats, total_pnl_cash
     
     current_time = time.time()
     if current_time - last_status_report_time >= STATUS_REPORT_INTERVAL:
@@ -833,7 +833,7 @@ def check_pending_orders(current_price, current_ts):
             pending_orders.remove(order)
 
 def check_orders(current_price, current_ts):
-    global stats, total_pnl_cash
+    global stats, total_pnl_cash, active_orders, loss_history
     
     for order in active_orders[:]:
         is_exit = False
