@@ -495,6 +495,32 @@ def handle_telegram_commands():
                 f"Bot กลับมาทำงานแล้ว!"
             )
         
+        # /reset
+        elif message == '/reset':
+            global active_orders, pending_orders, stats, total_pnl_cash, loss_history, timeout_history, last_trade_time_per_slot
+            
+            # รีเซ็ตตัวแปรทั้งหมด
+            active_orders = []
+            pending_orders = []
+            stats = {'win': 0, 'loss': 0, 'breakeven': 0, 'unfilled': 0}
+            total_pnl_cash = 0.0
+            loss_history = []
+            timeout_history = []
+            last_trade_time_per_slot = [0] * MAX_POSITIONS
+            
+            # เริ่มทำงานใหม่
+            IS_RUNNING = True
+            
+            send_tg_msg(
+                f"🔄 <b>BOT RESET COMPLETE</b>\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"✅ รีเซ็ตตัวแปรทั้งหมดแล้ว!\n"
+                f"📊 Stats: 0/0/0\n"
+                f"💰 PNL: $0.00\n"
+                f"🎯 Active Orders: 0\n"
+                f"🚀 Bot เริ่มทำงานใหม่แล้ว!"
+            )
+        
         # /balance
         elif message == '/balance':
             try:
@@ -566,6 +592,7 @@ def handle_telegram_commands():
                 f"/status - สถานะปัจจุบัน\n"
                 f"/holding - ดูว่าถือไปกี่วิแล้ว\n"
                 f"/timeout - ดู Orders ที่ Timeout\n"
+                f"/lossreason - ดูสาเหตุการ Loss\n"
                 f"/balance - ยอดเงินในบัญชี\n"
                 f"/stats - สถิติการเทรด\n"
                 f"━━━━━━━━━━━━━━━━\n"
@@ -586,6 +613,7 @@ def handle_telegram_commands():
                 f"<b>🎮 CONTROL</b>\n"
                 f"/stop - หยุด Bot\n"
                 f"/start - เริ่ม Bot ใหม่\n"
+                f"/reset - รีเซ็ต Bot + ล้างข้อมูล\n"
                 f"/closeall - ปิด Orders ทั้งหมด"
             )
 
