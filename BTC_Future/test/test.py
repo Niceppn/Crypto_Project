@@ -192,6 +192,7 @@ def handle_telegram_commands():
         
         # /status
         if message == '/status':
+            global IS_RUNNING, stats, total_pnl_cash, active_orders, pending_orders, CONFIDENCE_THRESHOLD, CAPITAL_PER_TRADE, HOLDING_TIME, PROFIT_TARGET_PCT, STOP_LOSS_PCT, MAKER_ORDER_TIMEOUT
             total_trades = stats['win'] + stats['loss'] + stats['breakeven']
             win_rate = (stats['win'] / total_trades * 100) if total_trades > 0 else 0
             
