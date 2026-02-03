@@ -90,7 +90,7 @@ def send_tg_msg(msg):
 
 def send_status_report():
     """ส่งรายงานสถานะทุก 30 นาที"""
-    global last_status_report_time, active_orders, stats, total_pnl_cash
+    global last_status_report_time
     
     current_time = time.time()
     if current_time - last_status_report_time >= STATUS_REPORT_INTERVAL:
@@ -192,7 +192,6 @@ def handle_telegram_commands():
         
         # /status
         if message == '/status':
-            global IS_RUNNING, stats, total_pnl_cash, active_orders, pending_orders, CONFIDENCE_THRESHOLD, CAPITAL_PER_TRADE, HOLDING_TIME, PROFIT_TARGET_PCT, STOP_LOSS_PCT, MAKER_ORDER_TIMEOUT
             total_trades = stats['win'] + stats['loss'] + stats['breakeven']
             win_rate = (stats['win'] / total_trades * 100) if total_trades > 0 else 0
             
@@ -478,7 +477,6 @@ def handle_telegram_commands():
         
         # /stop
         elif message == '/stop':
-            global IS_RUNNING
             IS_RUNNING = False
             send_tg_msg(
                 f"🔴 <b>BOT STOPPED</b>\n"
@@ -490,38 +488,11 @@ def handle_telegram_commands():
         
         # /start
         elif message == '/start':
-            global IS_RUNNING
             IS_RUNNING = True
             send_tg_msg(
                 f"🟢 <b>BOT STARTED</b>\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"Bot กลับมาทำงานแล้ว!"
-            )
-        
-        # /reset
-        elif message == '/reset':
-            global active_orders, pending_orders, stats, total_pnl_cash, loss_history, timeout_history, last_trade_time_per_slot, IS_RUNNING
-            
-            # รีเซ็ตตัวแปรทั้งหมด
-            active_orders = []
-            pending_orders = []
-            stats = {'win': 0, 'loss': 0, 'breakeven': 0, 'unfilled': 0}
-            total_pnl_cash = 0.0
-            loss_history = []
-            timeout_history = []
-            last_trade_time_per_slot = [0] * MAX_POSITIONS
-            
-            # เริ่มทำงานใหม่
-            IS_RUNNING = True
-            
-            send_tg_msg(
-                f"🔄 <b>BOT RESET COMPLETE</b>\n"
-                f"━━━━━━━━━━━━━━━━\n"
-                f"✅ รีเซ็ตตัวแปรทั้งหมดแล้ว!\n"
-                f"📊 Stats: 0/0/0\n"
-                f"💰 PNL: $0.00\n"
-                f"🎯 Active Orders: 0\n"
-                f"🚀 Bot เริ่มทำงานใหม่แล้ว!"
             )
         
         # /balance
@@ -595,7 +566,6 @@ def handle_telegram_commands():
                 f"/status - สถานะปัจจุบัน\n"
                 f"/holding - ดูว่าถือไปกี่วิแล้ว\n"
                 f"/timeout - ดู Orders ที่ Timeout\n"
-                f"/lossreason - ดูสาเหตุการ Loss\n"
                 f"/balance - ยอดเงินในบัญชี\n"
                 f"/stats - สถิติการเทรด\n"
                 f"━━━━━━━━━━━━━━━━\n"
@@ -616,7 +586,6 @@ def handle_telegram_commands():
                 f"<b>🎮 CONTROL</b>\n"
                 f"/stop - หยุด Bot\n"
                 f"/start - เริ่ม Bot ใหม่\n"
-                f"/reset - รีเซ็ต Bot + ล้างข้อมูล\n"
                 f"/closeall - ปิด Orders ทั้งหมด"
             )
 
@@ -836,7 +805,7 @@ def check_pending_orders(current_price, current_ts):
             pending_orders.remove(order)
 
 def check_orders(current_price, current_ts):
-    global stats, total_pnl_cash, active_orders, loss_history
+    global stats, total_pnl_cash
     
     for order in active_orders[:]:
         is_exit = False
@@ -948,7 +917,7 @@ def get_available_slot(current_ts):
     return None  # ไม่มี slot ที่พร้อม
 
 def predict(data_list, last_price, current_ts):
-    global last_trade_time_per_slot, active_orders, pending_orders, IS_RUNNING
+    global last_trade_time_per_slot, active_orders, pending_orders
     
     if not IS_RUNNING: return
 
