@@ -947,7 +947,7 @@ def get_available_slot(current_ts):
     return None  # ไม่มี slot ที่พร้อม
 
 def predict(data_list, last_price, current_ts):
-    global last_trade_time_per_slot, active_orders, pending_orders
+    global last_trade_time_per_slot, active_orders, pending_orders, IS_RUNNING
     
     if not IS_RUNNING: return
 
