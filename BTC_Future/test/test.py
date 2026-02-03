@@ -497,7 +497,7 @@ def handle_telegram_commands():
         
         # /reset
         elif message == '/reset':
-            global active_orders, pending_orders, stats, total_pnl_cash, loss_history, timeout_history, last_trade_time_per_slot
+            global active_orders, pending_orders, stats, total_pnl_cash, loss_history, timeout_history, last_trade_time_per_slot, IS_RUNNING
             
             # รีเซ็ตตัวแปรทั้งหมด
             active_orders = []
