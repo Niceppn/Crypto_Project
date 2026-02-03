@@ -10,7 +10,7 @@ from binance.enums import *
 # ==========================================
 SYMBOL_WS = "btcusdc"       # ชื่อสำหรับ Websocket (ตัวเล็ก)
 SYMBOL_TRADE = "BTCUSDC"    # ชื่อสำหรับส่งคำสั่ง (ตัวใหญ่)
-MODEL_FILE = "btcusdc_training_data.txt"
+MODEL_FILE = "/Users/Macbook/Collect_Crypto/BTC_Future/test/btcusdc_training_data.txt"
 
 # --- TELEGRAM ---
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
@@ -25,9 +25,8 @@ CONFIDENCE_THRESHOLD = 0.40  # ความมั่นใจ AI (สามา�
 CAPITAL_PER_TRADE = 200      # ทุนต่อไม้ (สามารถปรับได้)
 HOLDING_TIME = 1000           # วินาที (สามารถปรับได้)
 PROFIT_TARGET_PCT = 0.00075   # % (สามารถปรับได้)
-STOP_LOSS_PCT = 0.005        # % (สามารถปรับได้)
-MAKER_BUY_OFFSET_PCT_LOW = 0.0000001   # offset สำหรับ buy order ที่ 1 (ต่ำกว่าราคาปัจจุบัน)
-MAKER_BUY_OFFSET_PCT_HIGH = 0.000001   # offset สำหรับ buy order ที่ 2 (สูงกว่าราคาปัจจุบัน)
+STOP_LOSS_PCT = 0.007      # % (สามารถปรับได้)
+MAKER_BUY_OFFSET_PCT = 0.0000001
 MAKER_ORDER_TIMEOUT = 60     # Timeout ของ Limit Order (สามารถปรับได้)
 STATUS_REPORT_INTERVAL = 3800  # 30 นาที
 
@@ -624,8 +623,7 @@ def place_limit_sell(symbol, quantity, limit_price):
             type='LIMIT',
             quantity=quantity,
             price=str(round(limit_price, 1)),
-            timeInForce='GTC',
-            reduceOnly=True
+            timeInForce='GTC'
         )
         return order
     except Exception as e:
@@ -670,17 +668,35 @@ def cancel_order(symbol, order_id):
         client.futures_cancel_order(symbol=symbol, orderId=order_id)
         return True
     except Exception as e:
-        print(f"❌ Error Cancelling: {e}")
-        return False
+        # ไม่แสดง error ถ้า order ไม่มีอยู่ (ปกติ)
+        if "Unknown order" in str(e):
+            return True  # ถือว่าสำเร็จ (order ถูกยกเลิกไปแล้ว)
+        else:
+            print(f"❌ Error Cancelling: {e}")
+            return False
 
 def close_position(symbol, quantity, reason):
     try:
+        # ตรวจสอบว่ามี position อยู่จริงหรือไม่
+        positions = client.futures_position_information(symbol=symbol)
+        current_position = 0
+        
+        for pos in positions:
+            if pos['positionSide'] == 'BOTH' or pos['positionSide'] == 'LONG':
+                current_position = float(pos['positionAmt'])
+                break
+        
+        # ถ้าไม่มี position หรือ position น้อยกว่าที่จะปิด ให้สำเร็จไปเลย
+        if current_position <= 0 or current_position < quantity * 0.9:
+            print(f"ℹ️ No position to close (current: {current_position})")
+            return True
+        
+        # มี position จริง ให้ปิด
         order = client.futures_create_order(
             symbol=symbol,
             side='SELL',
             type='MARKET',
-            quantity=quantity,
-            reduceOnly=True
+            quantity=quantity
         )
         return True
     except Exception as e:
@@ -814,7 +830,8 @@ def check_orders(current_price, current_ts):
                 cancel_order(SYMBOL_TRADE, order['sell_order_id'])
                 success = close_position(SYMBOL_TRADE, order['quantity'], reason)
             else:
-                success = True
+                # ถ้าไม่มี sell_order_id (เช่น TP Hit ทันที) ต้องปิด position ด้วย Market Order
+                success = close_position(SYMBOL_TRADE, order['quantity'], reason)
             
             if success:
                 profit = (current_price - order['entry']) * order['quantity']
