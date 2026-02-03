@@ -10,7 +10,7 @@ from binance.enums import *
 # ==========================================
 SYMBOL_WS = "btcusdc"
 SYMBOL_TRADE = "BTCUSDC"
-MODEL_FILE = "BTC_Future/test/btcusdc_training_data.txt"
+MODEL_FILE = "btcusdc_training_data.txt"
 
 # --- TELEGRAM ---
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
