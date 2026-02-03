@@ -477,6 +477,7 @@ def handle_telegram_commands():
         
         # /stop
         elif message == '/stop':
+            global IS_RUNNING
             IS_RUNNING = False
             send_tg_msg(
                 f"🔴 <b>BOT STOPPED</b>\n"
@@ -488,6 +489,7 @@ def handle_telegram_commands():
         
         # /start
         elif message == '/start':
+            global IS_RUNNING
             IS_RUNNING = True
             send_tg_msg(
                 f"🟢 <b>BOT STARTED</b>\n"
