@@ -18,7 +18,7 @@ TG_CHAT_ID = "8440162744"
 
 # --- API KEYS ---
 API_KEY = "1EVQwptQguKnWL2ZG0aFNo4VQYfWj3pa2k6oxDT7JeLzjUeqPZqMsfPxsxBuPShy"
-SECRET_KEY = "ePHw4rwFMTrkwwmdruClXQzOSX9WRvMVFulDDWeAjkZvrHAGkEAIkr3h1HeCsqyv" 
+SECRET_KEY = "ePHw4rwFMTrkwwmdruClXQzOSX9WRvMVFulDDWeAjkZvrHAGkEAIkr3h1HeCsqyv"
 
 # --- Strategy ---
 CONFIDENCE_THRESHOLD = 0.40
@@ -59,6 +59,7 @@ except Exception as e:
 # GLOBAL VARS
 # ==========================================
 IS_RUNNING = True
+HAS_EXISTING_POSITION = False  # Flag สำหรับตรวจสอบ Position เดิม
 stats = {'win': 0, 'loss': 0, 'breakeven': 0, 'unfilled': 0}
 total_pnl_cash = 0.0
 active_orders = []
@@ -79,77 +80,7 @@ except:
     print(f"❌ Model File Not Found"); sys.exit()
 
 # ==========================================
-# 3. SYNC EXISTING POSITIONS
-# ==========================================
-def sync_existing_positions():
-    """ตรวจสอบและจัดการ Position ที่มีอยู่บน Binance ก่อนเริ่ม Bot"""
-    global active_orders
-    
-    try:
-        positions = client.futures_position_information(symbol=SYMBOL_TRADE)
-        current_position = 0
-        entry_price = 0
-        
-        for pos in positions:
-            amt = float(pos['positionAmt'])
-            if amt > 0:
-                current_position = amt
-                entry_price = float(pos['entryPrice'])
-                break
-        
-        if current_position > 0:
-            print(f"\n⚠️ พบ Position เดิม: {current_position} BTC @ ${entry_price:.2f}")
-            
-            open_orders = client.futures_get_open_orders(symbol=SYMBOL_TRADE)
-            sell_orders = [o for o in open_orders if o['side'] == 'SELL']
-            
-            qty_per_slot = round(CAPITAL_PER_TRADE / entry_price, 3)
-            estimated_slots = round(current_position / qty_per_slot)
-            
-            send_tg_msg(
-                f"⚠️ <b>EXISTING POSITION FOUND</b>\n"
-                f"━━━━━━━━━━━━━━━━\n"
-                f"📊 Position: {current_position} BTC\n"
-                f"💰 Entry: ${entry_price:.2f}\n"
-                f"📋 Open Sells: {len(sell_orders)}\n"
-                f"━━━━━━━━━━━━━━━━\n"
-                f"⚠️ Bot จะไม่เปิด Position ใหม่\n"
-                f"จนกว่า Position เดิมจะปิด\n"
-                f"หรือใช้ /closeall เพื่อปิดทั้งหมด"
-            )
-            
-            for i in range(min(estimated_slots, MAX_POSITIONS)):
-                active_orders.append({
-                    'entry': entry_price,
-                    'quantity': qty_per_slot,
-                    'take_profit': entry_price * (1 + PROFIT_TARGET_PCT),
-                    'stop_loss': entry_price * (1 - STOP_LOSS_PCT),
-                    'exit_ts': int(time.time()) + HOLDING_TIME,
-                    'entry_ts': int(time.time()),
-                    'sell_order_id': None,
-                    'confidence': 0,
-                    'slot': i,
-                    'synced': True
-                })
-            
-            return True
-        else:
-            print(f"✅ ไม่มี Position เดิม - พร้อมเริ่มใหม่")
-            
-            open_orders = client.futures_get_open_orders(symbol=SYMBOL_TRADE)
-            if len(open_orders) > 0:
-                print(f"🧹 ยกเลิก {len(open_orders)} Open Orders ที่ค้าง...")
-                for order in open_orders:
-                    cancel_order(SYMBOL_TRADE, order['orderId'])
-            
-            return False
-            
-    except Exception as e:
-        print(f"❌ Error syncing positions: {e}")
-        return False
-
-# ==========================================
-# 4. TELEGRAM FUNCTIONS
+# 3. TELEGRAM FUNCTIONS
 # ==========================================
 def send_tg_msg(msg):
     try: 
@@ -197,7 +128,7 @@ def get_telegram_updates():
 def handle_telegram_commands():
     global last_update_id, IS_RUNNING, active_orders, pending_orders, stats, total_pnl_cash
     global HOLDING_TIME, STOP_LOSS_PCT, PROFIT_TARGET_PCT, CONFIDENCE_THRESHOLD, CAPITAL_PER_TRADE
-    global MAKER_BUY_OFFSET_PCT, MAKER_ORDER_TIMEOUT
+    global MAKER_BUY_OFFSET_PCT, MAKER_ORDER_TIMEOUT, HAS_EXISTING_POSITION
     
     updates = get_telegram_updates()
     for update in updates:
@@ -221,14 +152,32 @@ def handle_telegram_commands():
                 balance = client.futures_account_balance()
                 usdt = next((item for item in balance if item["asset"] == "USDT"), None)
                 balance_text = f"💰 Balance: ${float(usdt['balance']):.2f}"
+                
+                # ดึง Position ปัจจุบัน
+                positions = client.futures_position_information(symbol=SYMBOL_TRADE)
+                pos_amt = 0
+                pos_entry = 0
+                pos_pnl = 0
+                for pos in positions:
+                    amt = float(pos['positionAmt'])
+                    if amt > 0:
+                        pos_amt = amt
+                        pos_entry = float(pos['entryPrice'])
+                        pos_pnl = float(pos['unRealizedProfit'])
+                        break
+                
+                pos_text = f"📊 Position: {pos_amt} BTC @ ${pos_entry:.2f}\n💹 Unrealized: ${pos_pnl:.2f}" if pos_amt > 0 else "📊 Position: None"
             except:
                 balance_text = "💰 Balance: N/A"
+                pos_text = "📊 Position: N/A"
             
             send_tg_msg(
                 f"📊 <b>BOT STATUS (MAKER ONLY)</b>\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"🤖 Status: {'🟢 RUNNING' if IS_RUNNING else '🔴 STOPPED'}\n"
+                f"🔒 Has Existing Pos: {'⚠️ YES' if HAS_EXISTING_POSITION else '✅ NO'}\n"
                 f"{balance_text}\n"
+                f"{pos_text}\n"
                 f"💵 Total PNL: <b>${total_pnl_cash:.4f}</b>\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"✅ Win: {stats['win']} | ❌ Loss: {stats['loss']}\n"
@@ -244,6 +193,41 @@ def handle_telegram_commands():
                 f"🎯 TP: {PROFIT_TARGET_PCT*100:.3f}%\n"
                 f"🛑 SL: {STOP_LOSS_PCT*100:.2f}%"
             )
+        
+        elif message == '/position':
+            try:
+                positions = client.futures_position_information(symbol=SYMBOL_TRADE)
+                open_orders = client.futures_get_open_orders(symbol=SYMBOL_TRADE)
+                
+                pos_amt = 0
+                pos_entry = 0
+                pos_pnl = 0
+                for pos in positions:
+                    amt = float(pos['positionAmt'])
+                    if amt > 0:
+                        pos_amt = amt
+                        pos_entry = float(pos['entryPrice'])
+                        pos_pnl = float(pos['unRealizedProfit'])
+                        break
+                
+                buy_orders = [o for o in open_orders if o['side'] == 'BUY']
+                sell_orders = [o for o in open_orders if o['side'] == 'SELL']
+                
+                send_tg_msg(
+                    f"📊 <b>POSITION DETAILS</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📈 Size: <b>{pos_amt} BTC</b>\n"
+                    f"💰 Entry: ${pos_entry:.2f}\n"
+                    f"💹 Unrealized PNL: ${pos_pnl:.2f}\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📋 Open Buy Orders: {len(buy_orders)}\n"
+                    f"📋 Open Sell Orders: {len(sell_orders)}\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"🔢 Expected: {MAX_POSITIONS} × 0.003 = 0.012 BTC\n"
+                    f"{'⚠️ POSITION MISMATCH!' if pos_amt > MAX_POSITIONS * 0.004 else '✅ Position OK'}"
+                )
+            except Exception as e:
+                send_tg_msg(f"❌ Error: {e}")
         
         elif message.startswith('/set_offset'):
             try:
@@ -297,40 +281,72 @@ def handle_telegram_commands():
         
         elif message == '/stop':
             IS_RUNNING = False
-            send_tg_msg("🔴 <b>BOT STOPPED</b>")
+            send_tg_msg("🔴 <b>BOT STOPPED</b>\nจะไม่เปิด Position ใหม่")
         
         elif message == '/start':
             IS_RUNNING = True
             send_tg_msg("🟢 <b>BOT STARTED</b>")
         
+        elif message == '/reset':
+            # Reset flag และ arrays เพื่อเริ่มต้นใหม่
+            HAS_EXISTING_POSITION = False
+            active_orders.clear()
+            pending_orders.clear()
+            send_tg_msg(
+                f"🔄 <b>BOT RESET</b>\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"✅ Cleared internal state\n"
+                f"⚠️ ตรวจสอบ Position บน Binance ด้วย!\n"
+                f"ใช้ /position เพื่อดู"
+            )
+        
         elif message == '/closeall':
-            if len(active_orders) == 0 and len(pending_orders) == 0:
-                send_tg_msg("ℹ️ ไม่มี Orders")
-            else:
-                closed_count = 0
-                
-                for order in active_orders[:]:
-                    if order.get('sell_order_id'):
-                        cancel_order(SYMBOL_TRADE, order['sell_order_id'])
-                    close_position(SYMBOL_TRADE, order['quantity'], "MANUAL")
-                    active_orders.remove(order)
+            closed_count = 0
+            
+            try:
+                # ยกเลิก Open Orders ทั้งหมดบน Binance
+                open_orders = client.futures_get_open_orders(symbol=SYMBOL_TRADE)
+                for order in open_orders:
+                    cancel_order(SYMBOL_TRADE, order['orderId'])
                     closed_count += 1
                 
-                for order in pending_orders[:]:
-                    if order.get('order_id'):
-                        cancel_order(SYMBOL_TRADE, order['order_id'])
-                    pending_orders.remove(order)
-                    closed_count += 1
+                # ปิด Position ทั้งหมด
+                positions = client.futures_position_information(symbol=SYMBOL_TRADE)
+                for pos in positions:
+                    amt = float(pos['positionAmt'])
+                    if amt > 0:
+                        client.futures_create_order(
+                            symbol=SYMBOL_TRADE,
+                            side='SELL',
+                            type='MARKET',
+                            quantity=amt
+                        )
+                        print(f"✅ Closed {amt} BTC Position")
                 
-                send_tg_msg(f"✅ ปิด/ยกเลิก {closed_count} Orders")
+                # Clear internal state
+                active_orders.clear()
+                pending_orders.clear()
+                HAS_EXISTING_POSITION = False
+                
+                send_tg_msg(
+                    f"✅ <b>CLOSE ALL COMPLETE</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📋 Cancelled {closed_count} Orders\n"
+                    f"📊 Closed all Positions\n"
+                    f"🔄 Internal state cleared"
+                )
+            except Exception as e:
+                send_tg_msg(f"❌ Error: {e}")
         
         elif message == '/help':
             send_tg_msg(
                 f"📚 <b>COMMANDS</b>\n"
                 f"━━━━━━━━━━━━━━━━\n"
-                f"/status - สถานะ\n"
+                f"/status - สถานะ Bot\n"
+                f"/position - ดู Position จริง\n"
                 f"/stop /start - หยุด/เริ่ม\n"
                 f"/closeall - ปิดทั้งหมด\n"
+                f"/reset - Reset state\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"<b>SETTINGS:</b>\n"
                 f"/set_offset [%] - Buy Offset\n"
@@ -347,6 +363,131 @@ def telegram_command_loop():
         except Exception as e:
             print(f"❌ Telegram Error: {e}")
         time.sleep(5)
+
+# ==========================================
+# 4. SYNC EXISTING POSITIONS (CRITICAL!)
+# ==========================================
+def sync_existing_positions():
+    """ตรวจสอบและจัดการ Position ที่มีอยู่บน Binance ก่อนเริ่ม Bot"""
+    global active_orders, HAS_EXISTING_POSITION
+    
+    try:
+        # ดึง Position ปัจจุบัน
+        positions = client.futures_position_information(symbol=SYMBOL_TRADE)
+        current_position = 0
+        entry_price = 0
+        
+        for pos in positions:
+            amt = float(pos['positionAmt'])
+            if amt > 0:
+                current_position = amt
+                entry_price = float(pos['entryPrice'])
+                break
+        
+        # ดึง Open Orders
+        open_orders = client.futures_get_open_orders(symbol=SYMBOL_TRADE)
+        buy_orders = [o for o in open_orders if o['side'] == 'BUY']
+        sell_orders = [o for o in open_orders if o['side'] == 'SELL']
+        
+        print(f"\n📊 SYNC CHECK:")
+        print(f"   Position: {current_position} BTC @ ${entry_price:.2f}")
+        print(f"   Open Buy Orders: {len(buy_orders)}")
+        print(f"   Open Sell Orders: {len(sell_orders)}")
+        
+        if current_position > 0:
+            HAS_EXISTING_POSITION = True
+            
+            # คำนวณจำนวน slots ที่ใช้อยู่
+            qty_per_slot = round(CAPITAL_PER_TRADE / entry_price, 3) if entry_price > 0 else 0.003
+            estimated_slots = round(current_position / qty_per_slot) if qty_per_slot > 0 else 0
+            
+            print(f"\n⚠️ พบ Position เดิม!")
+            print(f"   Estimated Slots: {estimated_slots}")
+            print(f"   Expected Max: {MAX_POSITIONS} slots = {MAX_POSITIONS * qty_per_slot:.3f} BTC")
+            
+            if current_position > MAX_POSITIONS * qty_per_slot * 1.5:
+                # Position ใหญ่เกินไป - มีปัญหา!
+                send_tg_msg(
+                    f"🚨 <b>WARNING: POSITION MISMATCH!</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📊 Position: <b>{current_position} BTC</b>\n"
+                    f"💰 Entry: ${entry_price:.2f}\n"
+                    f"📋 Open Sells: {len(sell_orders)}\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"⚠️ Position ใหญ่กว่าที่คาด!\n"
+                    f"🔢 Expected: {MAX_POSITIONS * qty_per_slot:.3f} BTC\n"
+                    f"🔢 Actual: {current_position} BTC\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"⛔ Bot จะไม่เปิด Position ใหม่\n"
+                    f"ใช้ /closeall เพื่อปิดทั้งหมด\n"
+                    f"หรือ /reset หลังจัดการ Position"
+                )
+            else:
+                send_tg_msg(
+                    f"⚠️ <b>EXISTING POSITION FOUND</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📊 Position: {current_position} BTC\n"
+                    f"💰 Entry: ${entry_price:.2f}\n"
+                    f"📋 Open Sells: {len(sell_orders)}\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"⛔ Bot จะไม่เปิด Position ใหม่\n"
+                    f"จนกว่า Position เดิมจะปิด\n"
+                    f"หรือใช้ /closeall → /reset"
+                )
+            
+            return True
+        else:
+            HAS_EXISTING_POSITION = False
+            print(f"✅ ไม่มี Position เดิม - พร้อมเริ่มใหม่")
+            
+            # ยกเลิก Open Orders ที่ค้างอยู่ (ถ้ามี)
+            if len(open_orders) > 0:
+                print(f"🧹 ยกเลิก {len(open_orders)} Open Orders ที่ค้าง...")
+                for order in open_orders:
+                    cancel_order(SYMBOL_TRADE, order['orderId'])
+                send_tg_msg(f"🧹 ยกเลิก {len(open_orders)} Orders ค้าง")
+            
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error syncing positions: {e}")
+        send_tg_msg(f"❌ Sync Error: {e}")
+        return False
+
+def check_position_before_trade():
+    """ตรวจสอบ Position ก่อนเปิด Order ใหม่ทุกครั้ง"""
+    global HAS_EXISTING_POSITION
+    
+    try:
+        positions = client.futures_position_information(symbol=SYMBOL_TRADE)
+        current_position = 0
+        
+        for pos in positions:
+            amt = float(pos['positionAmt'])
+            if amt > 0:
+                current_position = amt
+                break
+        
+        # คำนวณ max allowed position
+        max_allowed = MAX_POSITIONS * (CAPITAL_PER_TRADE / 78000) * 1.5  # ประมาณ 0.015 BTC
+        
+        if current_position > max_allowed:
+            if not HAS_EXISTING_POSITION:
+                HAS_EXISTING_POSITION = True
+                send_tg_msg(
+                    f"⚠️ <b>POSITION LIMIT REACHED</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📊 Current: {current_position} BTC\n"
+                    f"📊 Max: {max_allowed:.4f} BTC\n"
+                    f"⛔ หยุดเปิด Position ใหม่"
+                )
+            return False
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Check position error: {e}")
+        return False
 
 # ==========================================
 # 5. TRADING FUNCTIONS (MAKER ONLY)
@@ -404,11 +545,14 @@ def close_position(symbol, quantity, reason):
         if current_position <= 0 or current_position < quantity * 0.9:
             return True
         
+        # ปิดแค่ quantity ที่ระบุ
+        close_qty = min(quantity, current_position)
+        
         client.futures_create_order(
             symbol=symbol,
             side='SELL',
             type='MARKET',
-            quantity=quantity
+            quantity=close_qty
         )
         return True
     except Exception as e:
@@ -446,7 +590,8 @@ def check_pending_orders(current_price, current_ts):
                 f"📥 Entry: ${order['limit_price']:.2f}\n"
                 f"🎯 TP: ${order['take_profit']:.2f}\n"
                 f"🛑 SL: ${order['stop_loss']:.2f}\n"
-                f"🤖 AI: {order['confidence']*100:.2f}%"
+                f"🤖 AI: {order['confidence']*100:.2f}%\n"
+                f"📊 Active: {len(active_orders)}/{MAX_POSITIONS}"
             )
             continue
         
@@ -469,7 +614,7 @@ def check_pending_orders(current_price, current_ts):
 
 def check_active_orders(current_price, current_ts):
     """ตรวจสอบ Active Orders สำหรับ TP/SL/Time Exit"""
-    global stats, total_pnl_cash, loss_history
+    global stats, total_pnl_cash, loss_history, HAS_EXISTING_POSITION
     
     for order in active_orders[:]:
         is_exit = False
@@ -519,10 +664,16 @@ def check_active_orders(current_price, current_ts):
                 f"📥 Entry: ${order['entry']:.2f}\n"
                 f"📤 Exit: ${current_price:.2f}\n"
                 f"💰 PNL: <b>${profit:.4f}</b>\n"
-                f"📝 {reason}"
+                f"📝 {reason}\n"
+                f"📊 Active: {len(active_orders)-1}/{MAX_POSITIONS}"
             )
             
             active_orders.remove(order)
+            
+            # ตรวจสอบว่าปิดหมดแล้วหรือยัง
+            if len(active_orders) == 0 and len(pending_orders) == 0:
+                HAS_EXISTING_POSITION = False
+                print("✅ All positions closed - Ready for new trades")
 
 # ==========================================
 # 6. PREDICTION & SLOT MANAGEMENT
@@ -558,10 +709,19 @@ def get_available_slot(current_ts):
     return None
 
 def predict(data_list, last_price, current_ts):
-    global last_trade_time_per_slot, pending_orders
+    global last_trade_time_per_slot, pending_orders, HAS_EXISTING_POSITION
     
     if not IS_RUNNING: 
         return
+    
+    # ตรวจสอบ Position ก่อนเปิด Order ใหม่
+    if HAS_EXISTING_POSITION:
+        return
+    
+    # Double check กับ Binance ทุกๆ 30 วินาที
+    if current_ts % 30 == 0:
+        if not check_position_before_trade():
+            return
 
     available_slot = get_available_slot(current_ts)
     if available_slot is None: 
@@ -631,7 +791,8 @@ def predict(data_list, last_price, current_ts):
                     f"🎯 TP: ${tp:.2f}\n"
                     f"🛑 SL: ${sl:.2f}\n"
                     f"🤖 AI: {prob*100:.2f}%\n"
-                    f"⏱️ Timeout: {MAKER_ORDER_TIMEOUT}s"
+                    f"⏱️ Timeout: {MAKER_ORDER_TIMEOUT}s\n"
+                    f"📋 Slot: {available_slot + 1}/{MAX_POSITIONS}"
                 )
 
         except Exception as e:
@@ -664,32 +825,61 @@ def on_message(ws, msg):
     if p < current_sec['low']: 
         current_sec['low'] = min(current_sec['low'], p)
 
+def on_error(ws, error):
+    print(f"\n❌ WebSocket Error: {error}")
+
+def on_close(ws, close_status, close_msg):
+    print(f"\n⚠️ WebSocket Closed: {close_status} - {close_msg}")
+
+def on_open(ws):
+    print("✅ WebSocket Connected")
+
 # ==========================================
 # 8. MAIN
 # ==========================================
-print(f"\n🚀 Starting Bot (MAKER ONLY)...")
+print(f"\n{'='*50}")
+print(f"🚀 STARTING BOT (MAKER ONLY + SYNC)")
+print(f"{'='*50}")
 print(f"📉 Buy Offset: -{MAKER_BUY_OFFSET_PCT*100:.2f}% (Maker)")
 print(f"⏱️ Timeout: {MAKER_ORDER_TIMEOUT}s")
+print(f"📊 Max Positions: {MAX_POSITIONS}")
+print(f"{'='*50}")
 
+# CRITICAL: Sync positions ก่อนเริ่ม!
 sync_existing_positions()
 
 send_tg_msg(
-    f"🚀 <b>BOT STARTED (MAKER ONLY)</b>\n"
+    f"🚀 <b>BOT STARTED</b>\n"
     f"━━━━━━━━━━━━━━━━\n"
     f"📉 Buy Offset: -{MAKER_BUY_OFFSET_PCT*100:.2f}%\n"
     f"⏱️ Timeout: {MAKER_ORDER_TIMEOUT}s\n"
     f"🎯 TP: {PROFIT_TARGET_PCT*100:.3f}%\n"
     f"🛑 SL: {STOP_LOSS_PCT*100:.2f}%\n"
+    f"📊 Max: {MAX_POSITIONS} positions\n"
+    f"━━━━━━━━━━━━━━━━\n"
+    f"🔄 Sync: {'⚠️ Has Position' if HAS_EXISTING_POSITION else '✅ Clean'}\n"
     f"━━━━━━━━━━━━━━━━\n"
     f"ใช้ /help เพื่อดูคำสั่ง"
 )
 
+# Start Telegram handler
 telegram_thread = threading.Thread(target=telegram_command_loop, daemon=True)
 telegram_thread.start()
 print("✅ Telegram Handler Started")
 
-ws = websocket.WebSocketApp(
-    f"wss://demo-fstream.binance.com/ws/{SYMBOL_WS}@aggTrade", 
-    on_message=on_message
-)
-ws.run_forever()
+# Start WebSocket with reconnect
+while True:
+    try:
+        ws = websocket.WebSocketApp(
+            f"wss://demo-fstream.binance.com/ws/{SYMBOL_WS}@aggTrade",
+            on_message=on_message,
+            on_error=on_error,
+            on_close=on_close,
+            on_open=on_open
+        )
+        ws.run_forever(ping_interval=30, ping_timeout=10)
+    except Exception as e:
+        print(f"\n❌ Fatal Error: {e}")
+    
+    print("\n🔄 Reconnecting in 5 seconds...")
+    time.sleep(5)

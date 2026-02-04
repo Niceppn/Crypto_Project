@@ -29,7 +29,7 @@ STOP_LOSS_PCT = 0.01
 STATUS_REPORT_INTERVAL = 1800
 
 # --- Maker Buy Settings ---
-MAKER_BUY_OFFSET_PCT = 0.0002   # 0.03% ต่ำกว่าราคาตลาด (Maker)
+MAKER_BUY_OFFSET_PCT = 0.000   # 0.03% ต่ำกว่าราคาตลาด (Maker)
 MAKER_ORDER_TIMEOUT = 60        # Timeout สำหรับ Limit Order
 
 # --- Concurrent Positions ---
