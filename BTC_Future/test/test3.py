@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Trading Bot V3 - Maker Only (Multi-Stream)
-Uses V3 AI Model (33 features: Price + Volume + Order Book + Cross)
-3 WebSocket streams: aggTrade + depth@500ms + markPrice@1s
+Trading Bot V3 SPOT - Maker Only (Multi-Stream)
+Uses V3 AI Model (33 features, no funding)
+2 WebSocket streams: aggTrade + depth@500ms (Spot ไม่มี markPrice/funding)
 
 Maker Strategy:
   - Entry: Limit BUY at (market_price - offset)
   - Exit: Limit SELL at TP / Market SELL at SL or Time Exit
+
+Spot vs Futures:
+  - ไม่มี Position concept → ติดตามจาก BTC balance
+  - API คนละชุด: create_order() แทน futures_create_order()
+  - ไม่มี Leverage, ไม่มี Funding Fee
+  - Long only (ซื้อแล้วขาย)
 """
 
 import websocket, json, datetime, sys, requests, threading, time, os
@@ -21,52 +27,69 @@ from binance.enums import *
 # ==========================================
 # 1. CONFIGURATION
 # ==========================================
-SYMBOL_WS = "btcusdc"
-SYMBOL_TRADE = "BTCUSDC"
+SYMBOL_WS = "btcfdusd"  # สำหรับ WebSocket stream
+SYMBOL_TRADE = "BTCFDUSD"
+BASE_ASSET = "BTC"
+QUOTE_ASSET = "FDUSD"
 
-# --- Model ---
+# --- Model (train with: python train_model_v3.py --data spot_data.csv --no-funding) ---
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
-MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260207_231203.txt")
-META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260207_231203_meta.json")
+MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260207_161521.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data
+META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260207_161521_meta.json")  # ← meta ตัวเดียวกัน
 
 # --- TELEGRAM ---
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
 TG_CHAT_ID = "8440162744"
 
-# --- API KEYS ---
+# --- API KEYS (Spot) ---
+# ⚠️ ใช้ API Key ที่มีสิทธิ์ Spot Trading
 API_KEY = "eJVrU1CjLCKTOuS3QtQXfAVlxYBFWV1JHctSEEYDo3WL5uHBb2mbks6OUNytJmT2"
 SECRET_KEY = "b7EX7kRfTxGmyVi7JePsvWnt1AFWlgXGy9mhedJhtVptfquIzHqrZADSzauWKqOM"
 
-# --- Strategy (match training settings) ---
+# --- Spot Demo (demo-api.binance.com) ---
+USE_DEMO = True  # True = ใช้ demo, False = เทรดจริง
+
+# --- Strategy (optimized by optimize_config.py) ---
 CONFIDENCE_THRESHOLD = 0.60
 CAPITAL_PER_TRADE = 200
-HOLDING_TIME = 1800
-PROFIT_TARGET_PCT = 0.0008   # 0.05% (match training)
-STOP_LOSS_PCT = 0.01
+HOLDING_TIME = 600
+PROFIT_TARGET_PCT = 0.0005    # 0.10% TP
+STOP_LOSS_PCT = 0.01         # 1.00% SL
 STATUS_REPORT_INTERVAL = 1800
 
 # --- Maker Buy Settings ---
-MAKER_BUY_OFFSET_PCT = 0.0001
+MAKER_BUY_OFFSET_PCT = 0.0005  # 0.05% offset
 MAKER_ORDER_TIMEOUT = 60
 
-# --- Concurrent Positions ---
+# --- Concurrent Positions (optimized by optimize_slots.py) ---
 MAX_POSITIONS = 4
 COOLDOWN_SECONDS = 180
-SLOT2_COOLDOWN_SECONDS = 120
-SLOT3_COOLDOWN_SECONDS = 180
-SLOT4_COOLDOWN_SECONDS = 180
+SLOT2_COOLDOWN_SECONDS = 30
+SLOT3_COOLDOWN_SECONDS = 30
+SLOT4_COOLDOWN_SECONDS = 60
 
 # ==========================================
-# 2. CONNECT TO BINANCE
+# 2. CONNECT TO BINANCE SPOT
 # ==========================================
 try:
-    client = Client(API_KEY, SECRET_KEY, testnet=True)
-    client.FUTURES_URL = 'https://demo-fapi.binance.com'
+    if USE_DEMO:
+        client = Client(API_KEY, SECRET_KEY)
+        client.API_URL = 'https://demo-api.binance.com/api'
+        print("⚠️  Using SPOT DEMO (demo-api.binance.com)")
+    else:
+        client = Client(API_KEY, SECRET_KEY)
+        print("🔴 Using REAL SPOT")
     
-    balance = client.futures_account_balance()
-    usdt = next((item for item in balance if item["asset"] == "USDT"), None)
-    print(f"\n✅ เชื่อมต่อ Binance Testnet สำเร็จ!")
-    print(f"💰 เงินในพอร์ต: {usdt['balance']} USDT")
+    # Check USDC balance
+    account = client.get_account()
+    usdc_bal = next((b for b in account['balances'] if b['asset'] == QUOTE_ASSET), None)
+    btc_bal = next((b for b in account['balances'] if b['asset'] == BASE_ASSET), None)
+    
+    usdc_free = float(usdc_bal['free']) if usdc_bal else 0
+    btc_free = float(btc_bal['free']) if btc_bal else 0
+    
+    print(f"\n✅ เชื่อมต่อ Binance Spot สำเร็จ!")
+    print(f"💰 {QUOTE_ASSET}: {usdc_free:.2f} | {BASE_ASSET}: {btc_free:.6f}")
 
 except Exception as e:
     print(f"❌ เชื่อมต่อไม่ได้: {e}")
@@ -91,7 +114,7 @@ last_update_id = 0
 BUFFER_SIZE = 60
 buffer = deque(maxlen=BUFFER_SIZE)
 
-# Per-second aggregation (same structure as V2 collector)
+# Per-second aggregation
 current_sec = {
     'ts': None,
     'open': 0.0, 'high': 0.0, 'low': 999999.0, 'close': 0.0,
@@ -106,9 +129,6 @@ order_book = {
     'bid_qty': 0.0, 'ask_qty': 0.0,
     'spread': 0.0, 'book_imbalance': 0.0,
 }
-
-# Funding rate (updated from markPrice stream)
-funding_rate = 0.0
 
 # 33 features matching V3 model (no funding)
 FEATURE_COLS = [
@@ -134,22 +154,16 @@ FEATURE_COLS = [
 try:
     model = lgb.Booster(model_file=MODEL_FILE)
     
-    # Load metadata
     with open(META_FILE, 'r') as f:
         model_meta = json.load(f)
     
-    # Verify features match
     meta_features = model_meta.get('features', [])
     if meta_features != FEATURE_COLS:
         print(f"⚠️  Feature mismatch! Meta: {len(meta_features)}, Code: {len(FEATURE_COLS)}")
-        diff = set(meta_features) ^ set(FEATURE_COLS)
-        if diff:
-            print(f"   Diff: {diff}")
     
-    print(f"✅ Loaded V3 Model: {os.path.basename(MODEL_FILE)}")
+    print(f"✅ Loaded V3 Model (SPOT): {os.path.basename(MODEL_FILE)}")
     print(f"   Features: {model_meta.get('n_features', '?')}")
     print(f"   Precision: {model_meta.get('precision', 0)*100:.1f}%")
-    print(f"   Threshold: {model_meta.get('best_threshold', '?')}")
 except Exception as e:
     print(f"❌ Model Load Failed: {e}")
     sys.exit()
@@ -158,9 +172,9 @@ except Exception as e:
 # 4. TELEGRAM FUNCTIONS
 # ==========================================
 def send_tg_msg(msg):
-    try: 
+    try:
         requests.post(
-            f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage", 
+            f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage",
             data={'chat_id': TG_CHAT_ID, 'text': msg, 'parse_mode': 'HTML'},
             timeout=5
         )
@@ -173,7 +187,7 @@ def send_status_report():
         total_trades = stats['win'] + stats['loss'] + stats['breakeven']
         win_rate = (stats['win'] / total_trades * 100) if total_trades > 0 else 0
         send_tg_msg(
-            f"📊 <b>AUTO REPORT (V3)</b>\n"
+            f"📊 <b>AUTO REPORT (V3 SPOT)</b>\n"
             f"━━━━━━━━━━━━━━━━\n"
             f"⏰ {datetime.datetime.now().strftime('%H:%M:%S')}\n"
             f"💰 Total PNL: <b>${total_pnl_cash:.4f}</b>\n"
@@ -195,24 +209,20 @@ def get_telegram_updates():
         data = response.json()
         if data.get('ok') and data.get('result'):
             return data['result']
-    except:
-        pass
+    except: pass
     return []
 
 def handle_telegram_commands():
     global last_update_id, IS_RUNNING, active_orders, pending_orders, stats, total_pnl_cash
-    global HOLDING_TIME, STOP_LOSS_PCT, PROFIT_TARGET_PCT, CONFIDENCE_THRESHOLD, CAPITAL_PER_TRADE
+    global HOLDING_TIME, STOP_LOSS_PCT, PROFIT_TARGET_PCT, CONFIDENCE_THRESHOLD
     global MAKER_BUY_OFFSET_PCT, MAKER_ORDER_TIMEOUT, HAS_EXISTING_POSITION
     
     updates = get_telegram_updates()
     for update in updates:
-        if 'update_id' not in update:
-            continue
+        if 'update_id' not in update: continue
         last_update_id = update['update_id']
-        if 'message' not in update or not update['message']:
-            continue
-        if 'text' not in update['message'] or not update['message']['text']:
-            continue
+        if 'message' not in update or not update['message']: continue
+        if 'text' not in update['message'] or not update['message']['text']: continue
         
         message = update['message']['text'].strip()
         
@@ -220,26 +230,23 @@ def handle_telegram_commands():
             total_trades = stats['win'] + stats['loss'] + stats['breakeven']
             win_rate = (stats['win'] / total_trades * 100) if total_trades > 0 else 0
             try:
-                bal = client.futures_account_balance()
-                usdt_bal = next((item for item in bal if item["asset"] == "USDT"), None)
-                balance_text = f"💰 Balance: ${float(usdt_bal['balance']):.2f}"
-                positions = client.futures_position_information(symbol=SYMBOL_TRADE)
-                pos_amt = 0; pos_entry = 0; pos_pnl = 0
-                for pos in positions:
-                    amt = float(pos['positionAmt'])
-                    if amt > 0:
-                        pos_amt = amt; pos_entry = float(pos['entryPrice']); pos_pnl = float(pos['unRealizedProfit']); break
-                pos_text = f"📊 Pos: {pos_amt} BTC @ ${pos_entry:.2f}\n💹 Unrealized: ${pos_pnl:.2f}" if pos_amt > 0 else "📊 Position: None"
+                acct = client.get_account()
+                usdc_b = next((b for b in acct['balances'] if b['asset'] == QUOTE_ASSET), None)
+                btc_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+                usdc_val = float(usdc_b['free']) if usdc_b else 0
+                btc_val = float(btc_b['free']) if btc_b else 0
+                balance_text = f"💰 {QUOTE_ASSET}: {usdc_val:.2f} | {BASE_ASSET}: {btc_val:.6f}"
             except:
-                balance_text = "💰 Balance: N/A"; pos_text = "📊 Position: N/A"
+                balance_text = "💰 Balance: N/A"
             
             send_tg_msg(
-                f"📊 <b>BOT V3 STATUS</b>\n"
+                f"📊 <b>BOT V3 SPOT STATUS</b>\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"🤖 Status: {'🟢 RUNNING' if IS_RUNNING else '🔴 STOPPED'}\n"
+                f"🏪 Market: <b>SPOT</b>\n"
                 f"🧠 Model: V3 (33 features)\n"
-                f"🔒 Existing Pos: {'⚠️ YES' if HAS_EXISTING_POSITION else '✅ NO'}\n"
-                f"{balance_text}\n{pos_text}\n"
+                f"🔒 Has BTC: {'⚠️ YES' if HAS_EXISTING_POSITION else '✅ NO'}\n"
+                f"{balance_text}\n"
                 f"💵 Total PNL: <b>${total_pnl_cash:.4f}</b>\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"✅ Win: {stats['win']} | ❌ Loss: {stats['loss']}\n"
@@ -256,19 +263,20 @@ def handle_telegram_commands():
         
         elif message == '/position':
             try:
-                positions = client.futures_position_information(symbol=SYMBOL_TRADE)
-                open_orders = client.futures_get_open_orders(symbol=SYMBOL_TRADE)
-                pos_amt = 0; pos_entry = 0; pos_pnl = 0
-                for pos in positions:
-                    amt = float(pos['positionAmt'])
-                    if amt > 0:
-                        pos_amt = amt; pos_entry = float(pos['entryPrice']); pos_pnl = float(pos['unRealizedProfit']); break
-                buy_orders = [o for o in open_orders if o['side'] == 'BUY']
-                sell_orders = [o for o in open_orders if o['side'] == 'SELL']
+                acct = client.get_account()
+                btc_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+                btc_free = float(btc_b['free']) if btc_b else 0
+                btc_locked = float(btc_b['locked']) if btc_b else 0
+                open_ords = client.get_open_orders(symbol=SYMBOL_TRADE)
+                buy_orders = [o for o in open_ords if o['side'] == 'BUY']
+                sell_orders = [o for o in open_ords if o['side'] == 'SELL']
                 send_tg_msg(
-                    f"📊 <b>POSITION DETAILS</b>\n━━━━━━━━━━━━━━━━\n"
-                    f"📈 Size: <b>{pos_amt} BTC</b>\n💰 Entry: ${pos_entry:.2f}\n💹 PNL: ${pos_pnl:.2f}\n"
-                    f"━━━━━━━━━━━━━━━━\n📋 Buy Orders: {len(buy_orders)}\n📋 Sell Orders: {len(sell_orders)}"
+                    f"📊 <b>SPOT POSITION</b>\n━━━━━━━━━━━━━━━━\n"
+                    f"📈 BTC Free: <b>{btc_free:.6f}</b>\n"
+                    f"🔒 BTC Locked: {btc_locked:.6f}\n"
+                    f"💰 Total: {btc_free + btc_locked:.6f} BTC\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📋 Buy Orders: {len(buy_orders)}\n📋 Sell Orders: {len(sell_orders)}"
                 )
             except Exception as e:
                 send_tg_msg(f"❌ Error: {e}")
@@ -314,27 +322,42 @@ def handle_telegram_commands():
         elif message == '/reset':
             HAS_EXISTING_POSITION = False
             active_orders.clear(); pending_orders.clear()
-            send_tg_msg(f"🔄 <b>BOT RESET</b>\n✅ Cleared internal state\nใช้ /position เพื่อตรวจสอบ")
+            send_tg_msg(f"🔄 <b>BOT RESET</b>\n✅ Cleared internal state")
         
         elif message == '/closeall':
             try:
-                open_ords = client.futures_get_open_orders(symbol=SYMBOL_TRADE)
-                for o in open_ords: cancel_order(SYMBOL_TRADE, o['orderId'])
-                positions = client.futures_position_information(symbol=SYMBOL_TRADE)
-                for pos in positions:
-                    amt = float(pos['positionAmt'])
-                    if amt > 0:
-                        client.futures_create_order(symbol=SYMBOL_TRADE, side='SELL', type='MARKET', quantity=amt)
+                # Cancel all open orders
+                open_ords = client.get_open_orders(symbol=SYMBOL_TRADE)
+                for o in open_ords:
+                    client.cancel_order(symbol=SYMBOL_TRADE, orderId=o['orderId'])
+                
+                # Sell all BTC
+                acct = client.get_account()
+                btc_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+                btc_free = float(btc_b['free']) if btc_b else 0
+                if btc_free > 0.00001:
+                    # Round down to lot size
+                    sell_qty = round(btc_free, 5)
+                    if sell_qty > 0:
+                        client.create_order(
+                            symbol=SYMBOL_TRADE, side='SELL',
+                            type='MARKET', quantity=sell_qty
+                        )
+                
                 active_orders.clear(); pending_orders.clear(); HAS_EXISTING_POSITION = False
-                send_tg_msg(f"✅ <b>CLOSE ALL COMPLETE</b>\nCancelled {len(open_ords)} orders + closed positions")
+                send_tg_msg(
+                    f"✅ <b>CLOSE ALL (SPOT)</b>\n"
+                    f"Cancelled {len(open_ords)} orders\n"
+                    f"Sold {btc_free:.6f} BTC"
+                )
             except Exception as e:
                 send_tg_msg(f"❌ Error: {e}")
         
         elif message == '/help':
             send_tg_msg(
-                f"📚 <b>BOT V3 COMMANDS</b>\n━━━━━━━━━━━━━━━━\n"
-                f"/status - สถานะ\n/position - ดู Position\n"
-                f"/stop /start - หยุด/เริ่ม\n/closeall - ปิดทั้งหมด\n/reset - Reset\n"
+                f"📚 <b>BOT V3 SPOT COMMANDS</b>\n━━━━━━━━━━━━━━━━\n"
+                f"/status - สถานะ\n/position - ดู BTC balance\n"
+                f"/stop /start - หยุด/เริ่ม\n/closeall - ขาย BTC + cancel orders\n/reset - Reset\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"/set_offset [%] | /set_timeout [s]\n"
                 f"/set_conf [%] | /set_sl [%] | /set_tp [%]"
@@ -347,92 +370,104 @@ def telegram_command_loop():
         time.sleep(5)
 
 # ==========================================
-# 5. SYNC EXISTING POSITIONS
+# 5. SYNC EXISTING POSITIONS (SPOT = check BTC balance)
 # ==========================================
 def sync_existing_positions():
-    global active_orders, HAS_EXISTING_POSITION
+    """Spot: ตรวจว่ามี BTC ค้างอยู่ไหม"""
+    global HAS_EXISTING_POSITION
     try:
-        positions = client.futures_position_information(symbol=SYMBOL_TRADE)
-        current_position = 0; entry_price = 0
-        for pos in positions:
-            amt = float(pos['positionAmt'])
-            if amt > 0: current_position = amt; entry_price = float(pos['entryPrice']); break
+        acct = client.get_account()
+        btc_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+        btc_total = float(btc_b['free']) + float(btc_b['locked']) if btc_b else 0
         
-        open_orders = client.futures_get_open_orders(symbol=SYMBOL_TRADE)
-        print(f"\n📊 SYNC: Position={current_position} BTC @ ${entry_price:.2f} | Open Orders={len(open_orders)}")
+        open_orders = client.get_open_orders(symbol=SYMBOL_TRADE)
+        print(f"\n📊 SYNC: BTC={btc_total:.6f} | Open Orders={len(open_orders)}")
         
-        if current_position > 0:
+        # ถ้ามี BTC มากกว่า ~$10 ถือว่ามี position ค้าง
+        min_btc = 10.0 / 100000  # ~$10 worth at ~$100k
+        if btc_total > min_btc:
             HAS_EXISTING_POSITION = True
             send_tg_msg(
-                f"⚠️ <b>EXISTING POSITION</b>\n━━━━━━━━━━━━━━━━\n"
-                f"📊 {current_position} BTC @ ${entry_price:.2f}\n"
+                f"⚠️ <b>EXISTING BTC (SPOT)</b>\n━━━━━━━━━━━━━━━━\n"
+                f"📊 {btc_total:.6f} BTC\n"
                 f"⛔ ไม่เปิด Position ใหม่\nใช้ /closeall → /reset"
             )
             return True
         else:
             HAS_EXISTING_POSITION = False
             if len(open_orders) > 0:
-                for o in open_orders: cancel_order(SYMBOL_TRADE, o['orderId'])
+                for o in open_orders:
+                    client.cancel_order(symbol=SYMBOL_TRADE, orderId=o['orderId'])
                 send_tg_msg(f"🧹 ยกเลิก {len(open_orders)} Orders ค้าง")
-            print(f"✅ ไม่มี Position เดิม - พร้อมเริ่ม")
+            print(f"✅ ไม่มี BTC เดิม - พร้อมเริ่ม")
             return False
     except Exception as e:
         print(f"❌ Sync Error: {e}"); return False
 
 def check_position_before_trade():
+    """Spot: ตรวจ BTC balance ไม่ให้เกิน limit"""
     global HAS_EXISTING_POSITION
     try:
-        positions = client.futures_position_information(symbol=SYMBOL_TRADE)
-        current_position = 0
-        for pos in positions:
-            amt = float(pos['positionAmt'])
-            if amt > 0: current_position = amt; break
+        acct = client.get_account()
+        btc_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+        btc_total = float(btc_b['free']) + float(btc_b['locked']) if btc_b else 0
         max_allowed = MAX_POSITIONS * (CAPITAL_PER_TRADE / 70000) * 1.5
-        if current_position > max_allowed:
+        if btc_total > max_allowed:
             if not HAS_EXISTING_POSITION:
                 HAS_EXISTING_POSITION = True
-                send_tg_msg(f"⚠️ <b>POSITION LIMIT</b>\nCurrent: {current_position} BTC > Max: {max_allowed:.4f}")
+                send_tg_msg(f"⚠️ <b>BTC LIMIT</b>\nCurrent: {btc_total:.6f} BTC > Max: {max_allowed:.6f}")
             return False
         return True
     except: return False
 
 # ==========================================
-# 6. TRADING FUNCTIONS (MAKER ONLY)
+# 6. TRADING FUNCTIONS (SPOT - MAKER ONLY)
 # ==========================================
 def place_limit_buy(symbol, quantity, limit_price):
+    """Spot: Limit BUY"""
     try:
-        return client.futures_create_order(
+        return client.create_order(
             symbol=symbol, side='BUY', type='LIMIT',
-            quantity=quantity, price=str(round(limit_price, 1)), timeInForce='GTC'
+            quantity=quantity, price=str(round(limit_price, 2)),
+            timeInForce='GTC'
         )
-    except Exception as e: print(f"❌ Limit Buy Error: {e}"); return None
+    except Exception as e:
+        print(f"❌ Spot Limit Buy Error: {e}"); return None
 
 def place_limit_sell(symbol, quantity, limit_price):
+    """Spot: Limit SELL"""
     try:
-        return client.futures_create_order(
+        return client.create_order(
             symbol=symbol, side='SELL', type='LIMIT',
-            quantity=quantity, price=str(round(limit_price, 1)), timeInForce='GTC'
+            quantity=quantity, price=str(round(limit_price, 2)),
+            timeInForce='GTC'
         )
-    except Exception as e: print(f"❌ Limit Sell Error: {e}"); return None
+    except Exception as e:
+        print(f"❌ Spot Limit Sell Error: {e}"); return None
 
-def cancel_order(symbol, order_id):
-    try: client.futures_cancel_order(symbol=symbol, orderId=order_id); return True
+def cancel_order_spot(symbol, order_id):
+    """Spot: Cancel order"""
+    try:
+        client.cancel_order(symbol=symbol, orderId=order_id); return True
     except Exception as e:
         if "Unknown order" in str(e): return True
         print(f"❌ Cancel Error: {e}"); return False
 
-def close_position(symbol, quantity, reason):
+def close_position_spot(symbol, quantity, reason):
+    """Spot: Market SELL BTC"""
     try:
-        positions = client.futures_position_information(symbol=symbol)
-        current_position = 0
-        for pos in positions:
-            if pos['positionSide'] in ('BOTH', 'LONG'):
-                current_position = float(pos['positionAmt']); break
-        if current_position <= 0 or current_position < quantity * 0.9: return True
-        close_qty = min(quantity, current_position)
-        client.futures_create_order(symbol=symbol, side='SELL', type='MARKET', quantity=close_qty)
+        acct = client.get_account()
+        btc_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+        btc_free = float(btc_b['free']) if btc_b else 0
+        if btc_free < quantity * 0.9: return True
+        sell_qty = min(round(quantity, 5), round(btc_free, 5))
+        if sell_qty > 0.00001:
+            client.create_order(
+                symbol=symbol, side='SELL', type='MARKET', quantity=sell_qty
+            )
         return True
-    except Exception as e: print(f"❌ Close Error: {e}"); return False
+    except Exception as e:
+        print(f"❌ Spot Close Error: {e}"); return False
 
 def check_pending_orders(current_price, current_ts):
     global pending_orders, active_orders, stats, timeout_history
@@ -449,7 +484,7 @@ def check_pending_orders(current_price, current_ts):
             })
             pending_orders.remove(order)
             send_tg_msg(
-                f"🟢 <b>FILLED (MAKER)</b>\n━━━━━━━━━━━━━━━━\n"
+                f"🟢 <b>FILLED (SPOT MAKER)</b>\n━━━━━━━━━━━━━━━━\n"
                 f"📥 Entry: ${order['limit_price']:.2f}\n🎯 TP: ${order['take_profit']:.2f}\n"
                 f"🛑 SL: ${order['stop_loss']:.2f}\n🤖 AI: {order['confidence']*100:.1f}%\n"
                 f"📊 Active: {len(active_orders)}/{MAX_POSITIONS}"
@@ -457,7 +492,8 @@ def check_pending_orders(current_price, current_ts):
             continue
         if current_ts >= order['timeout_ts']:
             stats['unfilled'] += 1
-            if order.get('order_id'): cancel_order(SYMBOL_TRADE, order['order_id'])
+            if order.get('order_id'):
+                cancel_order_spot(SYMBOL_TRADE, order['order_id'])
             timeout_history.append({
                 'time': datetime.datetime.now().strftime('%H:%M:%S'),
                 'limit_price': order['limit_price'], 'confidence': order.get('confidence', 0)
@@ -476,8 +512,10 @@ def check_active_orders(current_price, current_ts):
             is_exit = True; reason = "TIME EXIT ⏳"
         
         if is_exit:
-            if order.get('sell_order_id'): cancel_order(SYMBOL_TRADE, order['sell_order_id'])
-            if "TP" not in reason: close_position(SYMBOL_TRADE, order['quantity'], reason)
+            if order.get('sell_order_id'):
+                cancel_order_spot(SYMBOL_TRADE, order['sell_order_id'])
+            if "TP" not in reason:
+                close_position_spot(SYMBOL_TRADE, order['quantity'], reason)
             profit = (current_price - order['entry']) * order['quantity']
             total_pnl_cash += profit
             if profit > 0: stats['win'] += 1
@@ -489,7 +527,7 @@ def check_active_orders(current_price, current_ts):
                 })
             else: stats['breakeven'] += 1
             send_tg_msg(
-                f"{'✅' if profit >= 0 else '❌'} <b>CLOSED</b>\n━━━━━━━━━━━━━━━━\n"
+                f"{'✅' if profit >= 0 else '❌'} <b>CLOSED (SPOT)</b>\n━━━━━━━━━━━━━━━━\n"
                 f"📥 Entry: ${order['entry']:.2f}\n📤 Exit: ${current_price:.2f}\n"
                 f"💰 PNL: <b>${profit:.4f}</b>\n📝 {reason}\n"
                 f"📊 Active: {len(active_orders)-1}/{MAX_POSITIONS}"
@@ -503,14 +541,13 @@ def check_active_orders(current_price, current_ts):
 # ==========================================
 def compute_features(data_list):
     """
-    Compute 33 features from buffer (list of per-second dicts)
-    Must match EXACTLY what train_model_v3.py creates
+    Compute 33 features from buffer (same as Futures version)
     """
     df = pd.DataFrame(data_list)
     if len(df) < 30:
         return None
     
-    i = len(df) - 1  # latest row index
+    i = len(df) - 1
     
     close = df['close']
     high = df['high']
@@ -582,44 +619,27 @@ def compute_features(data_list):
     spread_x_volume = spread_val * total_vol.iloc[i]
     price_vol_corr = close.rolling(10).corr(total_vol).iloc[i]
     
-    # Build feature dict (order must match FEATURE_COLS exactly)
     feat = {
-        'candle_body': candle_body,
-        'candle_range': candle_range,
-        'upper_shadow': upper_shadow,
-        'lower_shadow': lower_shadow,
-        'price_change_1': price_change_1,
-        'price_change_5': price_change_5,
-        'dist_ma15': dist_ma15,
-        'dist_ma30': dist_ma30,
-        'std_5': std_5,
-        'std_15': std_15,
-        'rsi_14': rsi_14,
-        'momentum_5': momentum_5,
-        'momentum_15': momentum_15,
+        'candle_body': candle_body, 'candle_range': candle_range,
+        'upper_shadow': upper_shadow, 'lower_shadow': lower_shadow,
+        'price_change_1': price_change_1, 'price_change_5': price_change_5,
+        'dist_ma15': dist_ma15, 'dist_ma30': dist_ma30,
+        'std_5': std_5, 'std_15': std_15, 'rsi_14': rsi_14,
+        'momentum_5': momentum_5, 'momentum_15': momentum_15,
         'trade_count': trade_count_val,
-        'volume_ratio': volume_ratio,
-        'net_flow_ma5': net_flow_ma5,
-        'net_flow_ma15': net_flow_ma15,
-        'net_flow_diff': net_flow_diff,
-        'volume_ma5': volume_ma5,
-        'volume_spike': volume_spike,
-        'cum_flow_10': cum_flow_10,
-        'total_volume': total_volume_val,
-        'spread': spread_val,
-        'spread_ma5': spread_ma5,
+        'volume_ratio': volume_ratio, 'net_flow_ma5': net_flow_ma5,
+        'net_flow_ma15': net_flow_ma15, 'net_flow_diff': net_flow_diff,
+        'volume_ma5': volume_ma5, 'volume_spike': volume_spike,
+        'cum_flow_10': cum_flow_10, 'total_volume': total_volume_val,
+        'spread': spread_val, 'spread_ma5': spread_ma5,
         'spread_change': spread_change,
-        'book_imbalance': book_imbalance_val,
-        'imbalance_ma5': imbalance_ma5,
-        'imbalance_ma15': imbalance_ma15,
-        'imbalance_change': imbalance_change,
+        'book_imbalance': book_imbalance_val, 'imbalance_ma5': imbalance_ma5,
+        'imbalance_ma15': imbalance_ma15, 'imbalance_change': imbalance_change,
         'bid_ask_ratio': bid_ask_ratio,
-        'imbalance_x_flow': imbalance_x_flow,
-        'spread_x_volume': spread_x_volume,
+        'imbalance_x_flow': imbalance_x_flow, 'spread_x_volume': spread_x_volume,
         'price_vol_corr': price_vol_corr,
     }
     
-    # Replace NaN with 0
     for k, v in feat.items():
         if pd.isna(v):
             feat[k] = 0.0
@@ -645,7 +665,7 @@ def get_available_slot(current_ts):
     return None
 
 def predict_and_trade(current_ts):
-    """V3 prediction with 33 features from multi-stream data"""
+    """V3 prediction — Spot version"""
     global last_trade_time_per_slot, pending_orders, HAS_EXISTING_POSITION
     
     if not IS_RUNNING: return
@@ -658,17 +678,15 @@ def predict_and_trade(current_ts):
     
     if len(buffer) < 30: return
     
-    # Compute 33 features
     feat = compute_features(list(buffer))
     if feat is None: return
     
-    # Predict
     feat_df = pd.DataFrame([feat])[FEATURE_COLS]
     prob = model.predict(feat_df)[0]
     
     last_price = buffer[-1]['close']
     
-    print(f"\rV3 | ${last_price:.1f} | AI: {prob*100:.1f}% | "
+    print(f"\rSPOT V3 | ${last_price:.1f} | AI: {prob*100:.1f}% | "
           f"OB: bid={order_book['best_bid']:.1f} ask={order_book['best_ask']:.1f} "
           f"imb={order_book['book_imbalance']:.3f} | "
           f"Active: {len(active_orders)} Pending: {len(pending_orders)} "
@@ -677,11 +695,11 @@ def predict_and_trade(current_ts):
     if prob >= CONFIDENCE_THRESHOLD:
         try:
             limit_buy_price = last_price * (1 - MAKER_BUY_OFFSET_PCT)
-            qty = round(CAPITAL_PER_TRADE / last_price, 3)
+            qty = round(CAPITAL_PER_TRADE / last_price, 5)  # Spot: 5 decimals
             tp = limit_buy_price * (1 + PROFIT_TARGET_PCT)
             sl = limit_buy_price * (1 - STOP_LOSS_PCT)
             
-            print(f"\n⚡ [V3 MAKER BUY] Slot {available_slot} @ ${limit_buy_price:.2f} | AI: {prob*100:.1f}%")
+            print(f"\n⚡ [SPOT MAKER BUY] Slot {available_slot} @ ${limit_buy_price:.2f} | AI: {prob*100:.1f}%")
             
             order_response = place_limit_buy(SYMBOL_TRADE, qty, limit_buy_price)
             
@@ -696,7 +714,7 @@ def predict_and_trade(current_ts):
                 last_trade_time_per_slot[available_slot] = current_ts
                 
                 send_tg_msg(
-                    f"⚡ <b>V3 MAKER BUY</b>\n━━━━━━━━━━━━━━━━\n"
+                    f"⚡ <b>SPOT MAKER BUY</b>\n━━━━━━━━━━━━━━━━\n"
                     f"📉 Limit: ${limit_buy_price:.2f}\n📊 Market: ${last_price:.2f}\n"
                     f"🎯 TP: ${tp:.2f} (+{PROFIT_TARGET_PCT*100:.3f}%)\n🛑 SL: ${sl:.2f}\n"
                     f"🤖 AI: {prob*100:.1f}%\n⏱️ Timeout: {MAKER_ORDER_TIMEOUT}s\n"
@@ -706,16 +724,15 @@ def predict_and_trade(current_ts):
             print(f"\n❌ Trade Error: {e}")
 
 # ==========================================
-# 9. MULTI-STREAM WEBSOCKET
+# 9. MULTI-STREAM WEBSOCKET (2 streams for Spot)
 # ==========================================
 def flush_current_sec():
-    """Flush current second data to buffer (called when new second starts)"""
+    """Flush current second data to buffer"""
     global current_sec
     
     if current_sec['ts'] is None:
         return
     
-    # Merge with latest order book snapshot
     row = {
         'open': current_sec['open'],
         'high': current_sec['high'],
@@ -734,13 +751,11 @@ def flush_current_sec():
         'ask_qty': order_book['ask_qty'],
         'spread': order_book['spread'],
         'book_imbalance': order_book['book_imbalance'],
-        'funding_rate': funding_rate,
     }
     
     buffer.append(row)
 
 def reset_current_sec(ts, price):
-    """Reset current_sec for new second"""
     global current_sec
     current_sec = {
         'ts': ts,
@@ -751,26 +766,24 @@ def reset_current_sec(ts, price):
     }
 
 def on_message(ws, msg):
-    """Handle all 3 streams: aggTrade, depth, markPrice"""
-    global current_sec, order_book, funding_rate
+    """Handle 2 streams: aggTrade + depth (Spot ไม่มี markPrice)"""
+    global current_sec, order_book
     
     data = json.loads(msg)
     stream = data.get('stream', '')
     d = data.get('data', data)
     
     # --- Stream 1: aggTrade ---
-    if 'aggTrade' in stream or 'e' in d and d.get('e') == 'aggTrade':
+    if 'aggTrade' in stream or d.get('e') == 'aggTrade':
         price = float(d['p'])
         qty = float(d['q'])
-        is_seller = d['m']  # True = seller is maker (taker bought)
+        is_seller = d['m']  # True = seller is maker
         ts = int(d['T'] / 1000)
         
-        # Check pending/active orders with every trade
         check_pending_orders(price, ts)
         check_active_orders(price, ts)
         send_status_report()
         
-        # New second → flush old, start new
         if current_sec['ts'] is None:
             reset_current_sec(ts, price)
         elif ts > current_sec['ts']:
@@ -778,7 +791,6 @@ def on_message(ws, msg):
             predict_and_trade(ts)
             reset_current_sec(ts, price)
         
-        # Aggregate trade into current second
         if is_seller:
             current_sec['sell_volume'] += qty
             current_sec['sell_count'] += 1
@@ -812,10 +824,6 @@ def on_message(ws, msg):
             order_book['spread'] = best_ask - best_bid
             total_qty = bid_qty + ask_qty
             order_book['book_imbalance'] = (bid_qty - ask_qty) / total_qty if total_qty > 0 else 0
-    
-    # --- Stream 3: markPrice (funding rate) ---
-    elif 'markPrice' in stream:
-        funding_rate = float(d.get('r', 0))
 
 def on_error(ws, error):
     print(f"\n❌ WebSocket Error: {error}")
@@ -824,16 +832,17 @@ def on_close(ws, close_status, close_msg):
     print(f"\n⚠️ WebSocket Closed: {close_status} - {close_msg}")
 
 def on_open(ws):
-    print("✅ Multi-Stream WebSocket Connected (aggTrade + depth + markPrice)")
+    print("✅ Spot WebSocket Connected (aggTrade + depth)")
 
 # ==========================================
 # 10. MAIN
 # ==========================================
 if __name__ == "__main__":
     print(f"\n{'='*55}")
-    print(f"🚀 TRADING BOT V3 - MAKER ONLY (Multi-Stream)")
+    print(f"🏪 TRADING BOT V3 SPOT - MAKER ONLY")
     print(f"{'='*55}")
     print(f"🧠 Model: V3 ({len(FEATURE_COLS)} features, no funding)")
+    print(f"🏪 Market: SPOT ({'DEMO' if USE_DEMO else 'REAL'})")
     print(f"📉 Buy Offset: -{MAKER_BUY_OFFSET_PCT*100:.2f}%")
     print(f"🎯 TP: {PROFIT_TARGET_PCT*100:.3f}% | 🛑 SL: {STOP_LOSS_PCT*100:.2f}%")
     print(f"🤖 Confidence: {CONFIDENCE_THRESHOLD*100:.0f}%")
@@ -844,13 +853,14 @@ if __name__ == "__main__":
     sync_existing_positions()
     
     send_tg_msg(
-        f"🚀 <b>BOT V3 STARTED</b>\n━━━━━━━━━━━━━━━━\n"
+        f"🏪 <b>BOT V3 SPOT STARTED</b>\n━━━━━━━━━━━━━━━━\n"
         f"🧠 Model: V3 (33 features)\n"
+        f"🏪 Market: SPOT ({'DEMO' if USE_DEMO else 'REAL'})\n"
         f"📉 Offset: -{MAKER_BUY_OFFSET_PCT*100:.2f}%\n"
         f"🎯 TP: {PROFIT_TARGET_PCT*100:.3f}% | 🛑 SL: {STOP_LOSS_PCT*100:.2f}%\n"
         f"🤖 Conf: {CONFIDENCE_THRESHOLD*100:.0f}%\n"
         f"📊 Max: {MAX_POSITIONS} positions\n"
-        f"🔄 Sync: {'⚠️ Has Position' if HAS_EXISTING_POSITION else '✅ Clean'}\n"
+        f"🔄 Sync: {'⚠️ Has BTC' if HAS_EXISTING_POSITION else '✅ Clean'}\n"
         f"━━━━━━━━━━━━━━━━\n/help เพื่อดูคำสั่ง"
     )
     
@@ -859,18 +869,17 @@ if __name__ == "__main__":
     tg_thread.start()
     print("✅ Telegram Handler Started")
     
-    # Multi-stream WebSocket URL
-    # 3 streams: aggTrade + depth@500ms + markPrice@1s
+    # Spot WebSocket URL — 2 streams (no markPrice for Spot)
+    # ใช้ Production stream เสมอ (market data เป็น public, ไม่ต้อง auth)
+    # Demo testnet stream ไม่มี market data สำหรับ BTCUSDC
     ws_url = (
-        f"wss://demo-fstream.binance.com/stream?streams="
+        f"wss://stream.binance.com:9443/stream?streams="
         f"{SYMBOL_WS}@aggTrade/"
-        f"{SYMBOL_WS}@depth@500ms/"
-        f"{SYMBOL_WS}@markPrice@1s"
+        f"{SYMBOL_WS}@depth@500ms"
     )
     
-    print(f"🌐 Connecting to 3 streams...")
+    print(f"🌐 Connecting to 2 Spot streams...")
     
-    # Start WebSocket with reconnect
     while True:
         try:
             ws = websocket.WebSocketApp(
