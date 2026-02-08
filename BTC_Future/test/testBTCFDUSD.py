@@ -39,7 +39,7 @@ MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260207_113458.txt")       # ←
 META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260207_113458_meta.json")  # ← meta ตัวเดียวกัน (33 features)
 
 # --- TELEGRAM ---
-TG_TOKEN = "8555159238:AAFQPvIFMqqvi7PxhBvXv1zfurF7XaF_kWY"
+TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
 TG_CHAT_ID = "8440162744"
 
 # --- API KEYS (Spot) ---
@@ -54,20 +54,20 @@ USE_DEMO = True  # True = ใช้ demo, False = เทรดจริง
 CONFIDENCE_THRESHOLD = 0.55
 CAPITAL_PER_TRADE = 15
 HOLDING_TIME = 1800
-PROFIT_TARGET_PCT = 0.00085    # 0.10% TP
+PROFIT_TARGET_PCT = 0.00095    # 0.10% TP
 STOP_LOSS_PCT = 0.01         # 1.00% SL
 STATUS_REPORT_INTERVAL = 1800
 
 # --- Maker Buy Settings ---
-MAKER_BUY_OFFSET_PCT = 0.0003  # 0.05% offset
+MAKER_BUY_OFFSET_PCT = 0.0005  # 0.05% offset
 MAKER_ORDER_TIMEOUT = 60
 
 # --- Concurrent Positions (optimized by optimize_slots.py) ---
 MAX_POSITIONS = 4
 COOLDOWN_SECONDS = 180
-SLOT2_COOLDOWN_SECONDS = 150
+SLOT2_COOLDOWN_SECONDS = 180
 SLOT3_COOLDOWN_SECONDS = 180
-SLOT4_COOLDOWN_SECONDS = 250
+SLOT4_COOLDOWN_SECONDS = 180
 
 # ==========================================
 # 2. CONNECT TO BINANCE SPOT
@@ -412,21 +412,21 @@ def sync_existing_positions():
         print(f"❌ Sync Error: {e}"); return False
 
 def check_position_before_trade():
-    """Spot: ตรวจ BTC balance ไม่ให้เกิน limit"""
-    global HAS_EXISTING_POSITION
+    """Spot: ตรวจ BTC balance ไม่ให้เกิน limit (ไม่นับ BTC จาก bot orders)"""
     try:
         acct = client.get_account()
         btc_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
         btc_total = float(btc_b['free']) + float(btc_b['locked']) if btc_b else 0
+        # หัก BTC ที่ bot ถืออยู่ใน active_orders ออก
+        bot_btc = sum(o.get('quantity', 0) for o in active_orders)
+        btc_external = btc_total - bot_btc
         current_price = buffer[-1]['close'] if len(buffer) > 0 else 100000
         max_allowed = MAX_POSITIONS * (CAPITAL_PER_TRADE / current_price) * 1.5
-        if btc_total > max_allowed:
-            if not HAS_EXISTING_POSITION:
-                HAS_EXISTING_POSITION = True
-                send_tg_msg(f"⚠️ <b>BTC LIMIT</b>\nCurrent: {btc_total:.6f} BTC > Max: {max_allowed:.6f}")
+        if btc_external > max_allowed:
+            print(f"\n⚠️ External BTC {btc_external:.6f} > Max {max_allowed:.6f} (bot holds {bot_btc:.6f})")
             return False
         return True
-    except: return False
+    except: return True
 
 # ==========================================
 # 6. TRADING FUNCTIONS (SPOT - MAKER ONLY)
@@ -677,7 +677,7 @@ def predict_and_trade(current_ts):
     global last_trade_time_per_slot, pending_orders, HAS_EXISTING_POSITION
     
     if not IS_RUNNING: return
-    if HAS_EXISTING_POSITION: return
+    if HAS_EXISTING_POSITION and len(active_orders) == 0 and len(pending_orders) == 0: return
     if current_ts % 30 == 0:
         if not check_position_before_trade(): return
     
