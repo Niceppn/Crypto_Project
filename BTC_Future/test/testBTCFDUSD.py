@@ -27,6 +27,7 @@ from binance.enums import *
 # ==========================================
 # 1. CONFIGURATION
 # ==========================================
+
 SYMBOL_WS = "btcfdusd"  # สำหรับ WebSocket stream
 SYMBOL_TRADE = "BTCFDUSD"
 BASE_ASSET = "BTC"
@@ -34,11 +35,11 @@ QUOTE_ASSET = "FDUSD"
 
 # --- Model (train with: python train_model_v3.py --data spot_data.csv --no-funding) ---
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
-MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260207_161521.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data
-META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260207_161521_meta.json")  # ← meta ตัวเดียวกัน
+MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260207_113458.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data (33 features)
+META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260207_113458_meta.json")  # ← meta ตัวเดียวกัน (33 features)
 
 # --- TELEGRAM ---
-TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
+TG_TOKEN = "8555159238:AAFQPvIFMqqvi7PxhBvXv1zfurF7XaF_kWY"
 TG_CHAT_ID = "8440162744"
 
 # --- API KEYS (Spot) ---
@@ -50,23 +51,23 @@ SECRET_KEY = "b7EX7kRfTxGmyVi7JePsvWnt1AFWlgXGy9mhedJhtVptfquIzHqrZADSzauWKqOM"
 USE_DEMO = True  # True = ใช้ demo, False = เทรดจริง
 
 # --- Strategy (optimized by optimize_config.py) ---
-CONFIDENCE_THRESHOLD = 0.60
-CAPITAL_PER_TRADE = 200
-HOLDING_TIME = 600
+CONFIDENCE_THRESHOLD = 0.55
+CAPITAL_PER_TRADE = 15
+HOLDING_TIME = 1000
 PROFIT_TARGET_PCT = 0.00065    # 0.10% TP
 STOP_LOSS_PCT = 0.01         # 1.00% SL
 STATUS_REPORT_INTERVAL = 1800
 
 # --- Maker Buy Settings ---
-MAKER_BUY_OFFSET_PCT = 0.0005  # 0.05% offset
+MAKER_BUY_OFFSET_PCT = 0.0003  # 0.05% offset
 MAKER_ORDER_TIMEOUT = 60
 
 # --- Concurrent Positions (optimized by optimize_slots.py) ---
 MAX_POSITIONS = 4
 COOLDOWN_SECONDS = 180
-SLOT2_COOLDOWN_SECONDS = 30
-SLOT3_COOLDOWN_SECONDS = 30
-SLOT4_COOLDOWN_SECONDS = 60
+SLOT2_COOLDOWN_SECONDS = 150
+SLOT3_COOLDOWN_SECONDS = 180
+SLOT4_COOLDOWN_SECONDS = 220
 
 # ==========================================
 # 2. CONNECT TO BINANCE SPOT
@@ -215,7 +216,7 @@ def get_telegram_updates():
 def handle_telegram_commands():
     global last_update_id, IS_RUNNING, active_orders, pending_orders, stats, total_pnl_cash
     global HOLDING_TIME, STOP_LOSS_PCT, PROFIT_TARGET_PCT, CONFIDENCE_THRESHOLD
-    global MAKER_BUY_OFFSET_PCT, MAKER_ORDER_TIMEOUT, HAS_EXISTING_POSITION
+    global MAKER_BUY_OFFSET_PCT, MAKER_ORDER_TIMEOUT, HAS_EXISTING_POSITION, CAPITAL_PER_TRADE
     
     updates = get_telegram_updates()
     for update in updates:
@@ -299,6 +300,12 @@ def handle_telegram_commands():
                 send_tg_msg(f"✅ Confidence: <b>{CONFIDENCE_THRESHOLD*100:.0f}%</b>")
             except: send_tg_msg("❌ ใช้: /set_conf 60")
         
+        elif message.startswith('/set_cap'):
+            try:
+                val = float(message.split()[1]); CAPITAL_PER_TRADE = val
+                send_tg_msg(f"✅ Capital/Trade: <b>${CAPITAL_PER_TRADE:.0f}</b>")
+            except: send_tg_msg("❌ ใช้: /set_cap 100")
+
         elif message.startswith('/set_sl'):
             try:
                 STOP_LOSS_PCT = float(message.split()[1]) / 100
@@ -359,7 +366,7 @@ def handle_telegram_commands():
                 f"/status - สถานะ\n/position - ดู BTC balance\n"
                 f"/stop /start - หยุด/เริ่ม\n/closeall - ขาย BTC + cancel orders\n/reset - Reset\n"
                 f"━━━━━━━━━━━━━━━━\n"
-                f"/set_offset [%] | /set_timeout [s]\n"
+                f"/set_cap [$] | /set_offset [%] | /set_timeout [s]\n"
                 f"/set_conf [%] | /set_sl [%] | /set_tp [%]"
             )
 
@@ -873,7 +880,7 @@ if __name__ == "__main__":
     # ใช้ Production stream เสมอ (market data เป็น public, ไม่ต้อง auth)
     # Demo testnet stream ไม่มี market data สำหรับ BTCUSDC
     ws_url = (
-        f"wss://stream.binance.com:9443/stream?streams="
+        f"wss://stream.binance.com:443/stream?streams="
         f"{SYMBOL_WS}@aggTrade/"
         f"{SYMBOL_WS}@depth@500ms"
     )

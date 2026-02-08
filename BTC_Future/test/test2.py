@@ -26,8 +26,8 @@ SYMBOL_TRADE = "BTCUSDC"
 
 # --- Model ---
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
-MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260207_231203.txt")
-META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260207_231203_meta.json")
+MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260208_001401.txt")
+META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260208_001401_meta.json")
 
 # --- TELEGRAM ---
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
@@ -40,13 +40,13 @@ SECRET_KEY = "b7EX7kRfTxGmyVi7JePsvWnt1AFWlgXGy9mhedJhtVptfquIzHqrZADSzauWKqOM"
 # --- Strategy (match training settings) ---
 CONFIDENCE_THRESHOLD = 0.60
 CAPITAL_PER_TRADE = 200
-HOLDING_TIME = 1800
-PROFIT_TARGET_PCT = 0.0008   # 0.05% (match training)
-STOP_LOSS_PCT = 0.01
+HOLDING_TIME = 1500
+PROFIT_TARGET_PCT = 0.0005   # 0.05% (match training)
+STOP_LOSS_PCT = 0.02
 STATUS_REPORT_INTERVAL = 1800
 
 # --- Maker Buy Settings ---
-MAKER_BUY_OFFSET_PCT = 0.0001
+MAKER_BUY_OFFSET_PCT = 0.0003
 MAKER_ORDER_TIMEOUT = 60
 
 # --- Concurrent Positions ---
