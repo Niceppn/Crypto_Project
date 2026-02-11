@@ -59,7 +59,7 @@ STOP_LOSS_PCT = 0.01         # 1.00% SL
 STATUS_REPORT_INTERVAL = 1800
 
 # --- Maker Buy Settings ---
-MAKER_BUY_OFFSET_PCT = 0.0005  # 0.05% offset
+MAKER_BUY_OFFSET_PCT = 0.00003  # 0.05% offset
 MAKER_ORDER_TIMEOUT = 60
 
 # --- Concurrent Positions (optimized by optimize_slots.py) ---
