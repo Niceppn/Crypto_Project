@@ -39,7 +39,7 @@ MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260211_121152.txt")       # ←
 META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260211_121152_meta.json")  # ← meta ตัวเดียวกัน (33 features)
 
 # --- TELEGRAM ---
-TG_TOKEN = "8555159238:AAFQPvIFMqqvi7PxhBvXv1zfurF7XaF_kWY"
+TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
 TG_CHAT_ID = "8440162744"
 
 # --- API KEYS (Spot) ---
@@ -51,10 +51,10 @@ SECRET_KEY = "b7EX7kRfTxGmyVi7JePsvWnt1AFWlgXGy9mhedJhtVptfquIzHqrZADSzauWKqOM"
 USE_DEMO = True  # True = ใช้ demo, False = เทรดจริง
 
 # --- Strategy (optimized by optimize_config.py) ---
-CONFIDENCE_THRESHOLD = 0.55
+CONFIDENCE_THRESHOLD = 0.58
 CAPITAL_PER_TRADE = 15
 HOLDING_TIME = 1800
-PROFIT_TARGET_PCT = 0.0015    # 0.10% TP
+PROFIT_TARGET_PCT = 0.001    # 0.10% TP
 STOP_LOSS_PCT = 0.01         # 1.00% SL
 STATUS_REPORT_INTERVAL = 1800
 
@@ -65,9 +65,9 @@ MAKER_ORDER_TIMEOUT = 60
 # --- Concurrent Positions (optimized by optimize_slots.py) ---
 MAX_POSITIONS = 4
 COOLDOWN_SECONDS = 180
-SLOT2_COOLDOWN_SECONDS = 180
-SLOT3_COOLDOWN_SECONDS = 240
-SLOT4_COOLDOWN_SECONDS = 240
+SLOT2_COOLDOWN_SECONDS = 120
+SLOT3_COOLDOWN_SECONDS = 120
+SLOT4_COOLDOWN_SECONDS = 180
 
 # ==========================================
 # 2. CONNECT TO BINANCE SPOT
@@ -477,27 +477,50 @@ def close_position_spot(symbol, quantity, reason):
     except Exception as e:
         print(f"❌ Spot Close Error: {e}"); return False
 
+last_check_pending_ts = 0
+
 def check_pending_orders(current_price, current_ts):
-    global pending_orders, active_orders, stats, timeout_history
+    global pending_orders, active_orders, stats, timeout_history, last_check_pending_ts
+    if not pending_orders: return
+    # throttle: เช็ค API ทุก 3 วินาที ไม่ใช่ทุก tick
+    if current_ts - last_check_pending_ts < 3: return
+    last_check_pending_ts = current_ts
     for order in pending_orders[:]:
-        if current_price <= order['limit_price']:
-            sell_order = place_limit_sell(SYMBOL_TRADE, order['quantity'], order['take_profit'])
-            sell_order_id = sell_order.get('orderId') if sell_order else None
-            active_orders.append({
-                'entry': order['limit_price'], 'quantity': order['quantity'],
-                'take_profit': order['take_profit'], 'stop_loss': order['stop_loss'],
-                'exit_ts': current_ts + HOLDING_TIME, 'entry_ts': current_ts,
-                'sell_order_id': sell_order_id,
-                'confidence': order.get('confidence', 0), 'slot': order.get('slot', 0)
-            })
-            pending_orders.remove(order)
-            send_tg_msg(
-                f"🟢 <b>FILLED (SPOT MAKER)</b>\n━━━━━━━━━━━━━━━━\n"
-                f"📥 Entry: ${order['limit_price']:.2f}\n🎯 TP: ${order['take_profit']:.2f}\n"
-                f"🛑 SL: ${order['stop_loss']:.2f}\n🤖 AI: {order['confidence']*100:.1f}%\n"
-                f"📊 Active: {len(active_orders)}/{MAX_POSITIONS}"
-            )
-            continue
+        # เช็ค order status จริงจาก Binance API
+        if order.get('order_id'):
+            try:
+                order_status = client.get_order(symbol=SYMBOL_TRADE, orderId=order['order_id'])
+                status = order_status.get('status', '')
+                if status == 'FILLED':
+                    filled_price = float(order_status.get('price', order['limit_price']))
+                    filled_qty = float(order_status.get('executedQty', order['quantity']))
+                    # หัก fee (0.1%) เพื่อให้ sell qty ไม่เกิน balance จริง
+                    sell_qty = round(filled_qty * 0.999, 5)
+                    tp = filled_price * (1 + PROFIT_TARGET_PCT)
+                    sell_order = place_limit_sell(SYMBOL_TRADE, sell_qty, tp)
+                    sell_order_id = sell_order.get('orderId') if sell_order else None
+                    active_orders.append({
+                        'entry': filled_price, 'quantity': sell_qty,
+                        'take_profit': tp, 'stop_loss': order['stop_loss'],
+                        'exit_ts': current_ts + HOLDING_TIME, 'entry_ts': current_ts,
+                        'sell_order_id': sell_order_id,
+                        'confidence': order.get('confidence', 0), 'slot': order.get('slot', 0)
+                    })
+                    pending_orders.remove(order)
+                    send_tg_msg(
+                        f"🟢 <b>FILLED (SPOT MAKER)</b>\n━━━━━━━━━━━━━━━━\n"
+                        f"📥 Entry: ${filled_price:.2f}\n🎯 TP: ${tp:.2f}\n"
+                        f"🛑 SL: ${order['stop_loss']:.2f}\n🤖 AI: {order['confidence']*100:.1f}%\n"
+                        f"📊 Active: {len(active_orders)}/{MAX_POSITIONS}"
+                    )
+                    continue
+                elif status in ('CANCELED', 'REJECTED', 'EXPIRED'):
+                    stats['unfilled'] += 1
+                    pending_orders.remove(order)
+                    continue
+            except Exception as e:
+                print(f"⚠️ Check order error: {e}")
+
         if current_ts >= order['timeout_ts']:
             stats['unfilled'] += 1
             if order.get('order_id'):
@@ -814,10 +837,10 @@ def on_message(ws, msg):
         current_sec['high'] = max(current_sec['high'], price)
         current_sec['low'] = min(current_sec['low'], price)
     
-    # --- Stream 2: depth (order book) ---
+    # --- Stream 2: depth5 (order book top 5 snapshot) ---
     elif 'depth' in stream:
-        bids = d.get('b', [])
-        asks = d.get('a', [])
+        bids = d.get('bids', d.get('b', []))
+        asks = d.get('asks', d.get('a', []))
         
         if bids and asks:
             best_bid = float(bids[0][0])
@@ -883,7 +906,7 @@ if __name__ == "__main__":
     ws_url = (
         f"wss://stream.binance.com:443/stream?streams="
         f"{SYMBOL_WS}@aggTrade/"
-        f"{SYMBOL_WS}@depth@500ms"
+        f"{SYMBOL_WS}@depth5@500ms"
     )
     
     print(f"🌐 Connecting to 2 Spot streams...")
