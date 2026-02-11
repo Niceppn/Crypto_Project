@@ -39,7 +39,7 @@ MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260211_121152.txt")       # ←
 META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260211_121152_meta.json")  # ← meta ตัวเดียวกัน (33 features)
 
 # --- TELEGRAM ---
-TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
+TG_TOKEN = "8555159238:AAFQPvIFMqqvi7PxhBvXv1zfurF7XaF_kWY"
 TG_CHAT_ID = "8440162744"
 
 # --- API KEYS (Spot) ---
