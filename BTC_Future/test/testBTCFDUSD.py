@@ -35,8 +35,8 @@ QUOTE_ASSET = "FDUSD"
 
 # --- Model (train with: python train_model_v3.py --data spot_data.csv --no-funding) ---
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
-MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260207_113458.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data (33 features)
-META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260207_113458_meta.json")  # ← meta ตัวเดียวกัน (33 features)
+MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260211_121152.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data (33 features)
+META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260211_121152_meta.json")  # ← meta ตัวเดียวกัน (33 features)
 
 # --- TELEGRAM ---
 TG_TOKEN = "8552406124:AAGhfHsvF0B65FeefrvEPHxzlW3pwZcmMkY"
@@ -66,8 +66,8 @@ MAKER_ORDER_TIMEOUT = 60
 MAX_POSITIONS = 4
 COOLDOWN_SECONDS = 180
 SLOT2_COOLDOWN_SECONDS = 180
-SLOT3_COOLDOWN_SECONDS = 180
-SLOT4_COOLDOWN_SECONDS = 180
+SLOT3_COOLDOWN_SECONDS = 240
+SLOT4_COOLDOWN_SECONDS = 240
 
 # ==========================================
 # 2. CONNECT TO BINANCE SPOT
