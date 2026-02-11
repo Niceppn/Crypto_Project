@@ -24,22 +24,21 @@ from collections import deque
 from binance.client import Client
 from binance.enums import *
 
-
 # ==========================================
 # 1. CONFIGURATION
 # ==========================================
 
-SYMBOL_WS = "btcfdusd"  # สำหรับ WebSocket stream
-SYMBOL_TRADE = "BTCFDUSD"
-BASE_ASSET = "BTC"
+SYMBOL_WS = "ethfdusd"  # สำหรับ WebSocket stream
+SYMBOL_TRADE = "ETHFDUSD"
+BASE_ASSET = "ETH"
 QUOTE_ASSET = "FDUSD"
 
 # --- Model (train with: python train_model_v3.py --data spot_data.csv --no-funding) ---
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
-MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260211_121152.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data (33 features)
-META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260211_121152_meta.json")  # ← meta ตัวเดียวกัน (33 features)
+MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260211_205205.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data (33 features)
+META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260211_205205_meta.json")  # ← meta ตัวเดียวกัน (33 features)
 # --- TELEGRAM ---
-TG_TOKEN = "8555159238:AAFQPvIFMqqvi7PxhBvXv1zfurF7XaF_kWY"
+TG_TOKEN = "8515779063:AAGMORwNT0FdPuYlQRxUx4sGh-yhYok5Wcc"
 TG_CHAT_ID = "8440162744"
 
 # --- API KEYS (Spot) ---
@@ -51,7 +50,7 @@ SECRET_KEY = "b7EX7kRfTxGmyVi7JePsvWnt1AFWlgXGy9mhedJhtVptfquIzHqrZADSzauWKqOM"
 USE_DEMO = True  # True = ใช้ demo, False = เทรดจริง
 
 # --- Strategy (optimized by optimize_config.py) ---
-CONFIDENCE_THRESHOLD = 0.58
+CONFIDENCE_THRESHOLD = 0.65
 CAPITAL_PER_TRADE = 15
 HOLDING_TIME = 1800
 PROFIT_TARGET_PCT = 0.001    # 0.10% TP
