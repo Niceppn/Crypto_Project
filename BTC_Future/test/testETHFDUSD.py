@@ -50,11 +50,11 @@ SECRET_KEY = "b7EX7kRfTxGmyVi7JePsvWnt1AFWlgXGy9mhedJhtVptfquIzHqrZADSzauWKqOM"
 USE_DEMO = True  # True = ใช้ demo, False = เทรดจริง
 
 # --- Strategy (optimized by optimize_config.py) ---
-CONFIDENCE_THRESHOLD = 0.65
+CONFIDENCE_THRESHOLD = 0.6
 CAPITAL_PER_TRADE = 15
 HOLDING_TIME = 1800
-PROFIT_TARGET_PCT = 0.001    # 0.10% TP
-STOP_LOSS_PCT = 0.01         # 1.00% SL
+PROFIT_TARGET_PCT = 0.0015    # 0.10% TP
+STOP_LOSS_PCT = 0.02         # 1.00% SL
 STATUS_REPORT_INTERVAL = 1800
 
 # --- Maker Buy Settings ---
