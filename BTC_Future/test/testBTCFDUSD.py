@@ -36,8 +36,8 @@ QUOTE_ASSET = "FDUSD"
 
 # --- Model (train with: python train_model_v3.py --data spot_data.csv --no-funding) ---
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
-MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260211_121152.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data (33 features)
-META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260211_121152_meta.json")  # ← meta ตัวเดียวกัน (33 features)
+MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260212_115256.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data (33 features)
+META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260212_115256_meta.json")  # ← meta ตัวเดียวกัน (33 features)
 # --- TELEGRAM ---
 TG_TOKEN = "8555159238:AAFQPvIFMqqvi7PxhBvXv1zfurF7XaF_kWY"
 TG_CHAT_ID = "8440162744"
@@ -51,11 +51,11 @@ SECRET_KEY = "b7EX7kRfTxGmyVi7JePsvWnt1AFWlgXGy9mhedJhtVptfquIzHqrZADSzauWKqOM"
 USE_DEMO = True  # True = ใช้ demo, False = เทรดจริง
 
 # --- Strategy (optimized by optimize_config.py) ---
-CONFIDENCE_THRESHOLD = 0.58
+CONFIDENCE_THRESHOLD = 0.60
 CAPITAL_PER_TRADE = 15
 HOLDING_TIME = 1800
-PROFIT_TARGET_PCT = 0.001    # 0.10% TP
-STOP_LOSS_PCT = 0.01         # 1.00% SL
+PROFIT_TARGET_PCT = 0.0015    # 0.10% TP
+STOP_LOSS_PCT = 0.02         # 1.00% SL
 STATUS_REPORT_INTERVAL = 1800
 
 # --- Maker Buy Settings ---
