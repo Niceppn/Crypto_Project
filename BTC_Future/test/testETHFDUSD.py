@@ -35,8 +35,8 @@ QUOTE_ASSET = "FDUSD"
 
 # --- Model (train with: python train_model_v3.py --data spot_data.csv --no-funding) ---
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
-MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260211_205205.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data (33 features)
-META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260211_205205_meta.json")  # ← meta ตัวเดียวกัน (33 features)
+MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260212_121400.txt")       # ← เปลี่ยนเป็นชื่อ model ที่เทรนจาก Spot data (33 features)
+META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260212_121400_meta.json")  # ← meta ตัวเดียวกัน (33 features)
 # --- TELEGRAM ---
 TG_TOKEN = "8515779063:AAGMORwNT0FdPuYlQRxUx4sGh-yhYok5Wcc"
 TG_CHAT_ID = "8440162744"
