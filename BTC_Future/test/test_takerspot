@@ -1,0 +1,884 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Trading Bot V3 SPOT - Taker Entry (Long Only)
+Uses V3 AI Model (33 features, no funding)
+2 WebSocket streams: aggTrade + depth@500ms
+
+Taker Strategy (zero fee on FDUSD):
+  - Entry: Market BUY when prob >= CONFIDENCE_THRESHOLD
+  - Exit: Limit SELL at TP / Market SELL at SL or Time Exit
+
+Backtest confirmed: Taker > Maker when fee = 0 (FDUSD pair)
+"""
+
+import websocket, json, datetime, sys, requests, threading, time, os
+import pandas as pd
+import numpy as np
+import lightgbm as lgb
+from collections import deque
+from binance.client import Client
+from binance.enums import *
+
+# ==========================================
+# 1. CONFIGURATION
+# ==========================================
+
+SYMBOL_WS = "btcfdusd"
+SYMBOL_TRADE = "BTCFDUSD"
+BASE_ASSET = "BTC"
+QUOTE_ASSET = "FDUSD"
+
+# --- Model ---
+MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
+MODEL_FILE = os.path.join(MODEL_DIR, "v3_model_20260211_205205.txt")
+META_FILE  = os.path.join(MODEL_DIR, "v3_model_20260211_205205_meta.json")
+
+# --- TELEGRAM ---
+TG_TOKEN = "8515779063:AAGMORwNT0FdPuYlQRxUx4sGh-yhYok5Wcc"
+TG_CHAT_ID = "8440162744"
+
+# --- API KEYS ---
+API_KEY = "eJVrU1CjLCKTOuS3QtQXfAVlxYBFWV1JHctSEEYDo3WL5uHBb2mbks6OUNytJmT2"
+SECRET_KEY = "b7EX7kRfTxGmyVi7JePsvWnt1AFWlgXGy9mhedJhtVptfquIzHqrZADSzauWKqOM"
+
+# --- Spot Demo ---
+USE_DEMO = True
+
+# --- Strategy ---
+CONFIDENCE_THRESHOLD = 0.033    # prob >= this -> BUY
+CAPITAL_PER_TRADE = 15
+HOLDING_TIME = 1800             # 30 min
+PROFIT_TARGET_PCT = 0.0015      # 0.15% TP
+STOP_LOSS_PCT = 0.01            # 1.00% SL
+STATUS_REPORT_INTERVAL = 1800
+
+# --- Concurrent Positions ---
+MAX_POSITIONS = 4
+COOLDOWN_SECONDS = 180
+SLOT2_COOLDOWN_SECONDS = 120
+SLOT3_COOLDOWN_SECONDS = 120
+SLOT4_COOLDOWN_SECONDS = 180
+
+# ==========================================
+# 2. CONNECT TO BINANCE SPOT
+# ==========================================
+try:
+    if USE_DEMO:
+        client = Client(API_KEY, SECRET_KEY)
+        client.API_URL = 'https://demo-api.binance.com/api'
+        print("  Using SPOT DEMO (demo-api.binance.com)")
+    else:
+        client = Client(API_KEY, SECRET_KEY)
+        print("  Using REAL SPOT")
+
+    account = client.get_account()
+    quote_bal = next((b for b in account['balances'] if b['asset'] == QUOTE_ASSET), None)
+    base_bal = next((b for b in account['balances'] if b['asset'] == BASE_ASSET), None)
+    quote_free = float(quote_bal['free']) if quote_bal else 0
+    base_free = float(base_bal['free']) if base_bal else 0
+
+    symbol_info = client.get_symbol_info(SYMBOL_TRADE)
+    QTY_STEP = 0.0001; PRICE_TICK = 0.01
+    QTY_PRECISION = 4; PRICE_PRECISION = 2
+    for f in symbol_info['filters']:
+        if f['filterType'] == 'LOT_SIZE':
+            QTY_STEP = float(f['stepSize'])
+            QTY_PRECISION = max(0, len(f['stepSize'].rstrip('0').split('.')[-1]))
+        elif f['filterType'] == 'PRICE_FILTER':
+            PRICE_TICK = float(f['tickSize'])
+            PRICE_PRECISION = max(0, len(f['tickSize'].rstrip('0').split('.')[-1]))
+
+    print(f"\n  Connected to Binance Spot")
+    print(f"  {QUOTE_ASSET}: {quote_free:.2f} | {BASE_ASSET}: {base_free:.6f}")
+    print(f"  {SYMBOL_TRADE}: qty_step={QTY_STEP} ({QTY_PRECISION} dp) | price_tick={PRICE_TICK} ({PRICE_PRECISION} dp)")
+
+except Exception as e:
+    print(f"  Connect failed: {e}")
+    sys.exit()
+
+# ==========================================
+# GLOBAL VARS
+# ==========================================
+IS_RUNNING = True
+HAS_EXISTING_POSITION = False
+stats = {'win': 0, 'loss': 0, 'breakeven': 0}
+total_pnl_cash = 0.0
+active_orders = []
+timeout_history = []
+loss_history = []
+last_trade_time_per_slot = [0] * MAX_POSITIONS
+last_status_report_time = time.time()
+last_update_id = 0
+
+# --- V3 Multi-Stream Data ---
+BUFFER_SIZE = 60
+buffer = deque(maxlen=BUFFER_SIZE)
+
+current_sec = {
+    'ts': None,
+    'open': 0.0, 'high': 0.0, 'low': 999999.0, 'close': 0.0,
+    'buy_volume': 0.0, 'sell_volume': 0.0, 'total_volume': 0.0,
+    'net_flow': 0.0,
+    'buy_count': 0, 'sell_count': 0, 'trade_count': 0,
+}
+
+order_book = {
+    'best_bid': 0.0, 'best_ask': 0.0,
+    'bid_qty': 0.0, 'ask_qty': 0.0,
+    'spread': 0.0, 'book_imbalance': 0.0,
+}
+
+# 33 features matching V3 model (no funding)
+FEATURE_COLS = [
+    'candle_body', 'candle_range', 'upper_shadow', 'lower_shadow',
+    'price_change_1', 'price_change_5',
+    'dist_ma15', 'dist_ma30',
+    'std_5', 'std_15',
+    'rsi_14',
+    'momentum_5', 'momentum_15',
+    'trade_count',
+    'volume_ratio', 'net_flow_ma5', 'net_flow_ma15', 'net_flow_diff',
+    'volume_ma5', 'volume_spike', 'cum_flow_10',
+    'total_volume',
+    'spread', 'spread_ma5', 'spread_change',
+    'book_imbalance', 'imbalance_ma5', 'imbalance_ma15', 'imbalance_change',
+    'bid_ask_ratio',
+    'imbalance_x_flow', 'spread_x_volume', 'price_vol_corr',
+]
+
+# ==========================================
+# 3. LOAD V3 MODEL
+# ==========================================
+try:
+    model = lgb.Booster(model_file=MODEL_FILE)
+    with open(META_FILE, 'r') as f:
+        model_meta = json.load(f)
+
+    meta_features = model_meta.get('features', [])
+    if meta_features != FEATURE_COLS:
+        print(f"  Feature mismatch! Meta: {len(meta_features)}, Code: {len(FEATURE_COLS)}")
+
+    print(f"  Loaded V3 Model (SPOT): {os.path.basename(MODEL_FILE)}")
+    print(f"   Features: {model_meta.get('n_features', '?')}")
+    print(f"   Precision: {model_meta.get('precision', 0)*100:.1f}%")
+except Exception as e:
+    print(f"  Model Load Failed: {e}")
+    sys.exit()
+
+# ==========================================
+# 4. TELEGRAM FUNCTIONS
+# ==========================================
+def send_tg_msg(msg):
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage",
+            data={'chat_id': TG_CHAT_ID, 'text': msg, 'parse_mode': 'HTML'},
+            timeout=5
+        )
+    except: pass
+
+def send_status_report():
+    global last_status_report_time
+    current_time = time.time()
+    if current_time - last_status_report_time >= STATUS_REPORT_INTERVAL:
+        total_trades = stats['win'] + stats['loss'] + stats['breakeven']
+        win_rate = (stats['win'] / total_trades * 100) if total_trades > 0 else 0
+        send_tg_msg(
+            f"<b>AUTO REPORT (V3 SPOT TAKER)</b>\n"
+            f"━━━━━━━━━━━━━━━━\n"
+            f"{datetime.datetime.now().strftime('%H:%M:%S')}\n"
+            f"Total PNL: <b>${total_pnl_cash:.4f}</b>\n"
+            f"Win: {stats['win']} | Loss: {stats['loss']}\n"
+            f"Win Rate: <b>{win_rate:.1f}%</b>\n"
+            f"Active: {len(active_orders)}/{MAX_POSITIONS}\n"
+            f"Buffer: {len(buffer)}/{BUFFER_SIZE}"
+        )
+        last_status_report_time = current_time
+
+def get_telegram_updates():
+    global last_update_id
+    try:
+        response = requests.get(
+            f"https://api.telegram.org/bot{TG_TOKEN}/getUpdates",
+            params={'offset': last_update_id + 1, 'timeout': 5},
+            timeout=10
+        )
+        data = response.json()
+        if data.get('ok') and data.get('result'):
+            return data['result']
+    except: pass
+    return []
+
+def handle_telegram_commands():
+    global last_update_id, IS_RUNNING, active_orders, stats, total_pnl_cash
+    global HOLDING_TIME, STOP_LOSS_PCT, PROFIT_TARGET_PCT, CONFIDENCE_THRESHOLD
+    global HAS_EXISTING_POSITION, CAPITAL_PER_TRADE
+
+    updates = get_telegram_updates()
+    for update in updates:
+        if 'update_id' not in update: continue
+        last_update_id = update['update_id']
+        if 'message' not in update or not update['message']: continue
+        if 'text' not in update['message'] or not update['message']['text']: continue
+
+        message = update['message']['text'].strip()
+
+        if message == '/status':
+            total_trades = stats['win'] + stats['loss'] + stats['breakeven']
+            win_rate = (stats['win'] / total_trades * 100) if total_trades > 0 else 0
+            try:
+                acct = client.get_account()
+                q_b = next((b for b in acct['balances'] if b['asset'] == QUOTE_ASSET), None)
+                b_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+                q_val = float(q_b['free']) if q_b else 0
+                b_val = float(b_b['free']) if b_b else 0
+                balance_text = f"{QUOTE_ASSET}: {q_val:.2f} | {BASE_ASSET}: {b_val:.6f}"
+            except:
+                balance_text = "Balance: N/A"
+
+            send_tg_msg(
+                f"<b>BOT V3 SPOT TAKER STATUS</b>\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"Status: {'RUNNING' if IS_RUNNING else 'STOPPED'}\n"
+                f"Market: <b>SPOT {'DEMO' if USE_DEMO else 'REAL'}</b>\n"
+                f"Entry: TAKER (Market Order)\n"
+                f"Model: V3 (33 features)\n"
+                f"Has {BASE_ASSET}: {'YES' if HAS_EXISTING_POSITION else 'NO'}\n"
+                f"{balance_text}\n"
+                f"Total PNL: <b>${total_pnl_cash:.4f}</b>\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"Win: {stats['win']} | Loss: {stats['loss']} | BE: {stats['breakeven']}\n"
+                f"Win Rate: <b>{win_rate:.1f}%</b>\n"
+                f"Active: {len(active_orders)}/{MAX_POSITIONS}\n"
+                f"Buffer: {len(buffer)}/{BUFFER_SIZE}\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"<b>SETTINGS:</b>\n"
+                f"TP: {PROFIT_TARGET_PCT*100:.3f}% | SL: {STOP_LOSS_PCT*100:.2f}%\n"
+                f"Conf: {CONFIDENCE_THRESHOLD*100:.2f}%"
+            )
+
+        elif message == '/position':
+            try:
+                acct = client.get_account()
+                b_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+                b_free = float(b_b['free']) if b_b else 0
+                b_locked = float(b_b['locked']) if b_b else 0
+                open_ords = client.get_open_orders(symbol=SYMBOL_TRADE)
+                buy_orders = [o for o in open_ords if o['side'] == 'BUY']
+                sell_orders = [o for o in open_ords if o['side'] == 'SELL']
+                send_tg_msg(
+                    f"<b>SPOT POSITION</b>\n━━━━━━━━━━━━━━━━\n"
+                    f"{BASE_ASSET} Free: <b>{b_free:.6f}</b>\n"
+                    f"{BASE_ASSET} Locked: {b_locked:.6f}\n"
+                    f"Total: {b_free + b_locked:.6f}\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"Bot Active: {len(active_orders)}/{MAX_POSITIONS}\n"
+                    f"Buy Orders: {len(buy_orders)} | Sell Orders: {len(sell_orders)}"
+                )
+            except Exception as e:
+                send_tg_msg(f"Error: {e}")
+
+        elif message.startswith('/set_conf'):
+            try:
+                val = float(message.split()[1])
+                CONFIDENCE_THRESHOLD = val / 100 if val > 1 else val
+                send_tg_msg(f"Confidence: <b>{CONFIDENCE_THRESHOLD*100:.2f}%</b>")
+            except: send_tg_msg("Usage: /set_conf 3.3")
+
+        elif message.startswith('/set_cap'):
+            try:
+                CAPITAL_PER_TRADE = float(message.split()[1])
+                send_tg_msg(f"Capital/Trade: <b>${CAPITAL_PER_TRADE:.0f}</b>")
+            except: send_tg_msg("Usage: /set_cap 100")
+
+        elif message.startswith('/set_sl'):
+            try:
+                STOP_LOSS_PCT = float(message.split()[1]) / 100
+                send_tg_msg(f"SL: <b>{STOP_LOSS_PCT*100:.2f}%</b>")
+            except: send_tg_msg("Usage: /set_sl 0.7")
+
+        elif message.startswith('/set_tp'):
+            try:
+                PROFIT_TARGET_PCT = float(message.split()[1]) / 100
+                send_tg_msg(f"TP: <b>{PROFIT_TARGET_PCT*100:.3f}%</b>")
+            except: send_tg_msg("Usage: /set_tp 0.15")
+
+        elif message == '/stop':
+            IS_RUNNING = False
+            send_tg_msg("<b>BOT STOPPED</b>")
+
+        elif message == '/start':
+            IS_RUNNING = True
+            send_tg_msg("<b>BOT STARTED</b>")
+
+        elif message == '/reset':
+            HAS_EXISTING_POSITION = False
+            active_orders.clear()
+            send_tg_msg("<b>BOT RESET</b>\nCleared internal state")
+
+        elif message == '/closeall':
+            try:
+                # Cancel all open orders
+                open_ords = client.get_open_orders(symbol=SYMBOL_TRADE)
+                for o in open_ords:
+                    client.cancel_order(symbol=SYMBOL_TRADE, orderId=o['orderId'])
+
+                # Sell all base asset
+                acct = client.get_account()
+                b_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+                b_free = float(b_b['free']) if b_b else 0
+                sold = 0.0
+                if b_free > 0.00001:
+                    sell_qty = float(int(b_free / QTY_STEP) * QTY_STEP)
+                    sell_qty = round(sell_qty, QTY_PRECISION)
+                    if sell_qty > 0:
+                        client.create_order(
+                            symbol=SYMBOL_TRADE, side='SELL',
+                            type='MARKET', quantity=sell_qty
+                        )
+                        sold = sell_qty
+
+                active_orders.clear(); HAS_EXISTING_POSITION = False
+                send_tg_msg(
+                    f"<b>CLOSE ALL (SPOT)</b>\n"
+                    f"Cancelled {len(open_ords)} orders\n"
+                    f"Sold {sold:.6f} {BASE_ASSET}"
+                )
+            except Exception as e:
+                send_tg_msg(f"Error: {e}")
+
+        elif message == '/help':
+            send_tg_msg(
+                f"<b>BOT V3 SPOT TAKER COMMANDS</b>\n━━━━━━━━━━━━━━━━\n"
+                f"/status - Bot status\n/position - {BASE_ASSET} balance\n"
+                f"/stop /start - Stop/Start\n/closeall - Sell all + cancel\n/reset - Reset\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"/set_conf [%] | /set_cap [$]\n"
+                f"/set_sl [%] | /set_tp [%]"
+            )
+
+def telegram_command_loop():
+    while True:
+        try: handle_telegram_commands()
+        except Exception as e: print(f"  TG Error: {e}")
+        time.sleep(5)
+
+# ==========================================
+# 5. SYNC EXISTING POSITIONS (SPOT = check balance)
+# ==========================================
+def sync_existing_positions():
+    global HAS_EXISTING_POSITION
+    try:
+        acct = client.get_account()
+        b_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+        b_total = float(b_b['free']) + float(b_b['locked']) if b_b else 0
+
+        open_orders = client.get_open_orders(symbol=SYMBOL_TRADE)
+        print(f"\n  SYNC: {BASE_ASSET}={b_total:.6f} | Open Orders={len(open_orders)}")
+
+        min_val = 10.0 / 100000  # ~$10 worth
+        if b_total > min_val:
+            HAS_EXISTING_POSITION = True
+            send_tg_msg(
+                f"<b>EXISTING {BASE_ASSET} (SPOT)</b>\n━━━━━━━━━━━━━━━━\n"
+                f"{b_total:.6f} {BASE_ASSET}\n"
+                f"Will not open new positions\nUse /closeall then /reset"
+            )
+            return True
+        else:
+            HAS_EXISTING_POSITION = False
+            if len(open_orders) > 0:
+                for o in open_orders:
+                    client.cancel_order(symbol=SYMBOL_TRADE, orderId=o['orderId'])
+                send_tg_msg(f"Cancelled {len(open_orders)} stale orders")
+            print(f"  No existing {BASE_ASSET} - ready")
+            return False
+    except Exception as e:
+        print(f"  Sync Error: {e}"); return False
+
+def check_position_before_trade():
+    try:
+        acct = client.get_account()
+        b_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+        b_total = float(b_b['free']) + float(b_b['locked']) if b_b else 0
+        bot_held = sum(o.get('quantity', 0) for o in active_orders)
+        b_external = b_total - bot_held
+        current_price = buffer[-1]['close'] if len(buffer) > 0 else 100000
+        max_allowed = MAX_POSITIONS * (CAPITAL_PER_TRADE / current_price) * 1.5
+        if b_external > max_allowed:
+            print(f"\n  External {BASE_ASSET} {b_external:.6f} > Max {max_allowed:.6f}")
+            return False
+        return True
+    except: return True
+
+# ==========================================
+# 6. TRADING FUNCTIONS (SPOT - TAKER ENTRY)
+# ==========================================
+def place_market_buy(symbol, quantity):
+    """Market BUY (taker entry)"""
+    try:
+        return client.create_order(
+            symbol=symbol, side='BUY', type='MARKET',
+            quantity=round(quantity, QTY_PRECISION)
+        )
+    except Exception as e:
+        print(f"  Market BUY Error: {e}"); return None
+
+def place_limit_sell(symbol, quantity, price):
+    """Limit SELL (TP exit)"""
+    try:
+        return client.create_order(
+            symbol=symbol, side='SELL', type='LIMIT',
+            quantity=round(quantity, QTY_PRECISION),
+            price=str(round(price, PRICE_PRECISION)),
+            timeInForce='GTC'
+        )
+    except Exception as e:
+        print(f"  Limit SELL Error: {e}"); return None
+
+def cancel_order_spot(symbol, order_id):
+    try:
+        client.cancel_order(symbol=symbol, orderId=order_id); return True
+    except Exception as e:
+        if "Unknown order" in str(e): return True
+        print(f"  Cancel Error: {e}"); return False
+
+def close_position_spot(symbol, quantity, reason):
+    """Market SELL to close"""
+    try:
+        acct = client.get_account()
+        b_b = next((b for b in acct['balances'] if b['asset'] == BASE_ASSET), None)
+        b_free = float(b_b['free']) if b_b else 0
+        if b_free < quantity * 0.9: return True
+        sell_qty = min(round(quantity, QTY_PRECISION), round(b_free, QTY_PRECISION))
+        sell_qty = float(int(sell_qty / QTY_STEP) * QTY_STEP)
+        sell_qty = round(sell_qty, QTY_PRECISION)
+        if sell_qty > 0:
+            client.create_order(
+                symbol=symbol, side='SELL', type='MARKET', quantity=sell_qty
+            )
+        return True
+    except Exception as e:
+        print(f"  Close Error: {e}"); return False
+
+last_check_active_ts = 0
+
+def check_active_orders(current_price, current_ts):
+    """Check TP/SL/Time exit for active orders"""
+    global stats, total_pnl_cash, loss_history, HAS_EXISTING_POSITION, last_check_active_ts
+
+    if not active_orders: return
+    if current_ts - last_check_active_ts < 3: return
+    last_check_active_ts = current_ts
+
+    for order in active_orders[:]:
+        is_exit = False; reason = ""
+        if current_price >= order['take_profit']:
+            is_exit = True; reason = "TP WIN"
+        elif current_price <= order['stop_loss']:
+            is_exit = True; reason = "STOP LOSS"
+        elif current_ts >= order['exit_ts']:
+            is_exit = True; reason = "TIME EXIT"
+
+        if not is_exit:
+            continue
+
+        if "TP" in reason:
+            # Check if TP limit sell actually filled
+            if order.get('sell_order_id'):
+                try:
+                    sell_status = client.get_order(symbol=SYMBOL_TRADE, orderId=order['sell_order_id'])
+                    status = sell_status.get('status', '')
+                    if status == 'FILLED':
+                        pass
+                    elif status in ('NEW', 'PARTIALLY_FILLED'):
+                        continue  # wait
+                    else:
+                        close_position_spot(SYMBOL_TRADE, order['quantity'], reason)
+                except:
+                    continue
+            else:
+                close_position_spot(SYMBOL_TRADE, order['quantity'], reason)
+        else:
+            # SL/TIME: cancel TP order, market sell
+            if order.get('sell_order_id'):
+                cancel_order_spot(SYMBOL_TRADE, order['sell_order_id'])
+            close_position_spot(SYMBOL_TRADE, order['quantity'], reason)
+
+        profit = (current_price - order['entry']) * order['quantity']
+        total_pnl_cash += profit
+        if profit > 0:
+            stats['win'] += 1
+        elif profit < 0:
+            stats['loss'] += 1
+            loss_history.append({
+                'time': datetime.datetime.now().strftime('%H:%M:%S'),
+                'entry': order['entry'], 'exit': current_price,
+                'pnl': profit, 'reason': reason
+            })
+        else:
+            stats['breakeven'] += 1
+
+        send_tg_msg(
+            f"{'WIN' if profit >= 0 else 'LOSS'} <b>CLOSED (SPOT)</b>\n━━━━━━━━━━━━━━━━\n"
+            f"Entry: ${order['entry']:.2f}\nExit: ${current_price:.2f}\n"
+            f"PNL: <b>${profit:.4f}</b>\n{reason}\n"
+            f"Active: {len(active_orders)-1}/{MAX_POSITIONS}"
+        )
+        active_orders.remove(order)
+        if len(active_orders) == 0:
+            HAS_EXISTING_POSITION = False
+
+# ==========================================
+# 7. V3 FEATURE ENGINEERING (33 features)
+# ==========================================
+def compute_features(data_list):
+    df = pd.DataFrame(data_list)
+    if len(df) < 30:
+        return None
+
+    i = len(df) - 1
+    close = df['close']; high = df['high']; low = df['low']; opn = df['open']
+
+    candle_body = close.iloc[i] - opn.iloc[i]
+    candle_range = high.iloc[i] - low.iloc[i]
+    upper_shadow = high.iloc[i] - max(opn.iloc[i], close.iloc[i])
+    lower_shadow = min(opn.iloc[i], close.iloc[i]) - low.iloc[i]
+
+    price_change_1 = (close.iloc[i] / close.iloc[i-1] - 1) * 100 if close.iloc[i-1] != 0 else 0
+    price_change_5 = (close.iloc[i] / close.iloc[i-5] - 1) * 100 if i >= 5 and close.iloc[i-5] != 0 else 0
+
+    ma15 = close.rolling(15).mean().iloc[i]
+    ma30 = close.rolling(30).mean().iloc[i]
+    dist_ma15 = close.iloc[i] - ma15
+    dist_ma30 = close.iloc[i] - ma30
+
+    std_5 = close.rolling(5).std().iloc[i]
+    std_15 = close.rolling(15).std().iloc[i]
+
+    delta = close.diff()
+    gain = delta.where(delta > 0, 0).rolling(14).mean().iloc[i]
+    loss_val = (-delta.where(delta < 0, 0)).rolling(14).mean().iloc[i]
+    rs = gain / (loss_val + 1e-10)
+    rsi_14 = 100 - (100 / (1 + rs))
+
+    momentum_5 = close.iloc[i] - close.iloc[i-5] if i >= 5 else 0
+    momentum_15 = close.iloc[i] - close.iloc[i-15] if i >= 15 else 0
+    trade_count_val = df['trade_count'].iloc[i]
+
+    buy_vol = df['buy_volume']; sell_vol = df['sell_volume']
+    total_vol = df['total_volume']; net_f = df['net_flow']
+
+    volume_ratio = buy_vol.iloc[i] / (sell_vol.iloc[i] + 1e-10)
+    net_flow_ma5 = net_f.rolling(5).mean().iloc[i]
+    net_flow_ma15 = net_f.rolling(15).mean().iloc[i]
+    net_flow_diff = net_f.diff().iloc[i]
+    volume_ma5 = total_vol.rolling(5).mean().iloc[i]
+    volume_ma15 = total_vol.rolling(15).mean().iloc[i]
+    volume_spike = total_vol.iloc[i] / (volume_ma15 + 1e-10)
+    cum_flow_10 = net_f.rolling(10).sum().iloc[i]
+    total_volume_val = total_vol.iloc[i]
+
+    spread_series = df['spread']; imb_series = df['book_imbalance']
+    spread_val = spread_series.iloc[i]
+    spread_ma5 = spread_series.rolling(5).mean().iloc[i]
+    spread_change = spread_series.diff().iloc[i]
+    book_imbalance_val = imb_series.iloc[i]
+    imbalance_ma5 = imb_series.rolling(5).mean().iloc[i]
+    imbalance_ma15 = imb_series.rolling(15).mean().iloc[i]
+    imbalance_change = imb_series.diff().iloc[i]
+    bid_ask_ratio = df['bid_qty'].iloc[i] / (df['ask_qty'].iloc[i] + 1e-10)
+
+    imbalance_x_flow = book_imbalance_val * net_f.iloc[i]
+    spread_x_volume = spread_val * total_vol.iloc[i]
+    price_vol_corr = close.rolling(10).corr(total_vol).iloc[i]
+
+    feat = {
+        'candle_body': candle_body, 'candle_range': candle_range,
+        'upper_shadow': upper_shadow, 'lower_shadow': lower_shadow,
+        'price_change_1': price_change_1, 'price_change_5': price_change_5,
+        'dist_ma15': dist_ma15, 'dist_ma30': dist_ma30,
+        'std_5': std_5, 'std_15': std_15, 'rsi_14': rsi_14,
+        'momentum_5': momentum_5, 'momentum_15': momentum_15,
+        'trade_count': trade_count_val,
+        'volume_ratio': volume_ratio, 'net_flow_ma5': net_flow_ma5,
+        'net_flow_ma15': net_flow_ma15, 'net_flow_diff': net_flow_diff,
+        'volume_ma5': volume_ma5, 'volume_spike': volume_spike,
+        'cum_flow_10': cum_flow_10, 'total_volume': total_volume_val,
+        'spread': spread_val, 'spread_ma5': spread_ma5,
+        'spread_change': spread_change,
+        'book_imbalance': book_imbalance_val, 'imbalance_ma5': imbalance_ma5,
+        'imbalance_ma15': imbalance_ma15, 'imbalance_change': imbalance_change,
+        'bid_ask_ratio': bid_ask_ratio,
+        'imbalance_x_flow': imbalance_x_flow, 'spread_x_volume': spread_x_volume,
+        'price_vol_corr': price_vol_corr,
+    }
+
+    for k, v in feat.items():
+        if pd.isna(v): feat[k] = 0.0
+
+    return feat
+
+# ==========================================
+# 8. PREDICTION & SLOT MANAGEMENT
+# ==========================================
+def get_available_slot(current_ts):
+    total_open = len(active_orders)
+    if total_open >= MAX_POSITIONS: return None
+    if total_open == 0: return 0
+    if total_open == 1:
+        entry_time = active_orders[0].get('entry_ts', current_ts)
+        if (current_ts - entry_time) >= SLOT2_COOLDOWN_SECONDS: return 1
+    if total_open == 2:
+        slot2 = next((o for o in active_orders if o['slot'] == 1), None)
+        if slot2 and (current_ts - slot2.get('entry_ts', current_ts)) >= SLOT3_COOLDOWN_SECONDS: return 2
+    if total_open == 3:
+        slot3 = next((o for o in active_orders if o['slot'] == 2), None)
+        if slot3 and (current_ts - slot3.get('entry_ts', current_ts)) >= SLOT4_COOLDOWN_SECONDS: return 3
+    return None
+
+def predict_and_trade(current_ts):
+    """V3 prediction — Spot Taker (Long only)"""
+    global last_trade_time_per_slot, active_orders, HAS_EXISTING_POSITION
+
+    if not IS_RUNNING: return
+    if HAS_EXISTING_POSITION and len(active_orders) == 0: return
+    if current_ts % 30 == 0:
+        if not check_position_before_trade(): return
+
+    available_slot = get_available_slot(current_ts)
+    if available_slot is None: return
+
+    if len(buffer) < 30: return
+
+    feat = compute_features(list(buffer))
+    if feat is None: return
+
+    feat_df = pd.DataFrame([feat])[FEATURE_COLS]
+    prob = model.predict(feat_df)[0]
+
+    last_price = buffer[-1]['close']
+
+    print(f"\rSPOT TAKER | ${last_price:.1f} | AI: {prob*100:.2f}% | "
+          f"OB: bid={order_book['best_bid']:.1f} ask={order_book['best_ask']:.1f} "
+          f"imb={order_book['book_imbalance']:.3f} | "
+          f"Active: {len(active_orders)} Buf: {len(buffer)}", end="")
+
+    if prob >= CONFIDENCE_THRESHOLD:
+        try:
+            raw_qty = CAPITAL_PER_TRADE / last_price
+            qty = float(int(raw_qty / QTY_STEP) * QTY_STEP)
+            qty = round(qty, QTY_PRECISION)
+
+            tp = round(last_price * (1 + PROFIT_TARGET_PCT), PRICE_PRECISION)
+            sl = round(last_price * (1 - STOP_LOSS_PCT), PRICE_PRECISION)
+
+            print(f"\n  [SPOT TAKER BUY] Slot {available_slot} @ ~${last_price:.2f} | AI: {prob*100:.2f}%")
+
+            # Market BUY (taker)
+            order_response = place_market_buy(SYMBOL_TRADE, qty)
+
+            if order_response:
+                # Get actual fill price
+                fill_price = last_price
+                fills = order_response.get('fills', [])
+                if fills:
+                    total_cost = sum(float(f['price']) * float(f['qty']) for f in fills)
+                    total_qty = sum(float(f['qty']) for f in fills)
+                    fill_price = total_cost / total_qty if total_qty > 0 else last_price
+                filled_qty = float(order_response.get('executedQty', qty))
+
+                # Actual qty we hold (spot: account for possible rounding)
+                sell_qty = float(int(filled_qty / QTY_STEP) * QTY_STEP)
+                sell_qty = round(sell_qty, QTY_PRECISION)
+
+                # Recalculate TP/SL from fill price
+                tp = round(fill_price * (1 + PROFIT_TARGET_PCT), PRICE_PRECISION)
+                sl = round(fill_price * (1 - STOP_LOSS_PCT), PRICE_PRECISION)
+
+                # Place TP limit sell
+                sell_order = place_limit_sell(SYMBOL_TRADE, sell_qty, tp)
+                sell_order_id = sell_order.get('orderId') if sell_order else None
+
+                active_orders.append({
+                    'entry': fill_price, 'quantity': sell_qty,
+                    'take_profit': tp, 'stop_loss': sl,
+                    'exit_ts': current_ts + HOLDING_TIME, 'entry_ts': current_ts,
+                    'sell_order_id': sell_order_id,
+                    'confidence': prob, 'slot': available_slot
+                })
+                last_trade_time_per_slot[available_slot] = current_ts
+
+                send_tg_msg(
+                    f"<b>SPOT TAKER BUY</b>\n━━━━━━━━━━━━━━━━\n"
+                    f"Entry: ${fill_price:.2f}\n"
+                    f"TP: ${tp:.2f} (+{PROFIT_TARGET_PCT*100:.3f}%)\n"
+                    f"SL: ${sl:.2f}\n"
+                    f"AI: {prob*100:.2f}%\n"
+                    f"Qty: {sell_qty}\n"
+                    f"Slot: {available_slot + 1}/{MAX_POSITIONS}"
+                )
+        except Exception as e:
+            print(f"\n  Trade Error: {e}")
+
+# ==========================================
+# 9. MULTI-STREAM WEBSOCKET (2 streams for Spot)
+# ==========================================
+def flush_current_sec():
+    global current_sec
+    if current_sec['ts'] is None: return
+
+    row = {
+        'open': current_sec['open'], 'high': current_sec['high'],
+        'low': current_sec['low'], 'close': current_sec['close'],
+        'buy_volume': current_sec['buy_volume'],
+        'sell_volume': current_sec['sell_volume'],
+        'total_volume': current_sec['total_volume'],
+        'net_flow': current_sec['net_flow'],
+        'buy_count': current_sec['buy_count'],
+        'sell_count': current_sec['sell_count'],
+        'trade_count': current_sec['trade_count'],
+        'best_bid': order_book['best_bid'],
+        'best_ask': order_book['best_ask'],
+        'bid_qty': order_book['bid_qty'],
+        'ask_qty': order_book['ask_qty'],
+        'spread': order_book['spread'],
+        'book_imbalance': order_book['book_imbalance'],
+    }
+    buffer.append(row)
+
+def reset_current_sec(ts, price):
+    global current_sec
+    current_sec = {
+        'ts': ts,
+        'open': price, 'high': price, 'low': price, 'close': price,
+        'buy_volume': 0.0, 'sell_volume': 0.0, 'total_volume': 0.0,
+        'net_flow': 0.0,
+        'buy_count': 0, 'sell_count': 0, 'trade_count': 0,
+    }
+
+def on_message(ws, msg):
+    global current_sec, order_book
+
+    data = json.loads(msg)
+    stream = data.get('stream', '')
+    d = data.get('data', data)
+
+    # --- Stream 1: aggTrade ---
+    if 'aggTrade' in stream or d.get('e') == 'aggTrade':
+        price = float(d['p'])
+        qty = float(d['q'])
+        is_seller = d['m']
+        ts = int(d['T'] / 1000)
+
+        check_active_orders(price, ts)
+        send_status_report()
+
+        if current_sec['ts'] is None:
+            reset_current_sec(ts, price)
+        elif ts > current_sec['ts']:
+            flush_current_sec()
+            predict_and_trade(ts)
+            reset_current_sec(ts, price)
+
+        if is_seller:
+            current_sec['sell_volume'] += qty
+            current_sec['sell_count'] += 1
+            current_sec['net_flow'] -= qty
+        else:
+            current_sec['buy_volume'] += qty
+            current_sec['buy_count'] += 1
+            current_sec['net_flow'] += qty
+
+        current_sec['total_volume'] += qty
+        current_sec['trade_count'] += 1
+        current_sec['close'] = price
+        current_sec['high'] = max(current_sec['high'], price)
+        current_sec['low'] = min(current_sec['low'], price)
+
+    # --- Stream 2: depth5 ---
+    elif 'depth' in stream:
+        bids = d.get('bids', d.get('b', []))
+        asks = d.get('asks', d.get('a', []))
+
+        if bids and asks:
+            best_bid = float(bids[0][0])
+            best_ask = float(asks[0][0])
+            bid_qty = float(bids[0][1])
+            ask_qty = float(asks[0][1])
+
+            order_book['best_bid'] = best_bid
+            order_book['best_ask'] = best_ask
+            order_book['bid_qty'] = bid_qty
+            order_book['ask_qty'] = ask_qty
+            order_book['spread'] = best_ask - best_bid
+            total_qty = bid_qty + ask_qty
+            order_book['book_imbalance'] = (bid_qty - ask_qty) / total_qty if total_qty > 0 else 0
+
+def on_error(ws, error):
+    print(f"\n  WebSocket Error: {error}")
+
+def on_close(ws, close_status, close_msg):
+    print(f"\n  WebSocket Closed: {close_status} - {close_msg}")
+
+def on_open(ws):
+    print("  Spot WebSocket Connected (aggTrade + depth)")
+
+# ==========================================
+# 10. MAIN
+# ==========================================
+if __name__ == "__main__":
+    print(f"\n{'='*55}")
+    print(f"  TRADING BOT V3 SPOT - TAKER (Long Only)")
+    print(f"{'='*55}")
+    print(f"  Model: V3 ({len(FEATURE_COLS)} features, no funding)")
+    print(f"  Market: SPOT ({'DEMO' if USE_DEMO else 'REAL'})")
+    print(f"  Entry: TAKER (Market Order)")
+    print(f"  Conf: >= {CONFIDENCE_THRESHOLD*100:.2f}%")
+    print(f"  TP: {PROFIT_TARGET_PCT*100:.3f}% | SL: {STOP_LOSS_PCT*100:.2f}%")
+    print(f"  Max Positions: {MAX_POSITIONS}")
+    print(f"{'='*55}")
+
+    sync_existing_positions()
+
+    send_tg_msg(
+        f"<b>BOT V3 SPOT TAKER STARTED</b>\n━━━━━━━━━━━━━━━━\n"
+        f"Model: V3 (33 features)\n"
+        f"Market: SPOT ({'DEMO' if USE_DEMO else 'REAL'})\n"
+        f"Entry: TAKER (Market Order)\n"
+        f"Conf: >={CONFIDENCE_THRESHOLD*100:.2f}%\n"
+        f"TP: {PROFIT_TARGET_PCT*100:.3f}% | SL: {STOP_LOSS_PCT*100:.2f}%\n"
+        f"Max: {MAX_POSITIONS} positions\n"
+        f"Sync: {'Has ' + BASE_ASSET if HAS_EXISTING_POSITION else 'Clean'}\n"
+        f"━━━━━━━━━━━━━━━━\n/help for commands"
+    )
+
+    tg_thread = threading.Thread(target=telegram_command_loop, daemon=True)
+    tg_thread.start()
+    print("  Telegram Handler Started")
+
+    # 2 streams (Spot: no markPrice)
+    ws_url = (
+        f"wss://stream.binance.com:443/stream?streams="
+        f"{SYMBOL_WS}@aggTrade/"
+        f"{SYMBOL_WS}@depth5"
+    )
+
+    print(f"  Connecting to 2 Spot streams...")
+
+    while True:
+        try:
+            ws = websocket.WebSocketApp(
+                ws_url,
+                on_message=on_message,
+                on_error=on_error,
+                on_close=on_close,
+                on_open=on_open
+            )
+            ws.run_forever(ping_interval=30, ping_timeout=10)
+        except Exception as e:
+            print(f"\n  Fatal Error: {e}")
+
+        print("\n  Reconnecting in 5 seconds...")
+        time.sleep(5)
